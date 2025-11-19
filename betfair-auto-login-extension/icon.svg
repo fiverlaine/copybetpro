@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#dc2626" stroke="#b91c1c" stroke-width="4"/>
+  
+  <!-- Inner circle -->
+  <circle cx="64" cy="64" r="45" fill="none" stroke="white" stroke-width="3" opacity="0.3"/>
+  
+  <!-- Letter B -->
+  <text x="64" y="78" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="white">B</text>
+  
+  <!-- Small dot indicator -->
+  <circle cx="85" cy="45" r="8" fill="#10b981"/>
+  <circle cx="85" cy="45" r="4" fill="white"/>
+</svg>

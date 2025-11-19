@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Criar Ícones PNG - Betfair Extension</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; cursor: pointer; }
+        button:hover { background: #005a8b; }
+    </style>
+</head>
+<body>
+    <h1>Criador de Ícones PNG para Extensão Betfair</h1>
+    <p>Clique nos botões para baixar os ícones PNG necessários:</p>
+    
+    <div id="canvases"></div>
+    
+    <script>
+        function createIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            canvas.id = `canvas${size}`;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Background circle (red)
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 2, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Border
+            ctx.strokeStyle = '#b91c1c';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Letter B (white)
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('B', size/2, size/2);
+            
+            // Small green dot (status indicator)
+            if (size >= 32) {
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.arc(size * 0.75, size * 0.25, size * 0.08, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(size * 0.75, size * 0.25, size * 0.04, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            return canvas;
+        }
+        
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const link = document.createElement('a');
+            link.download = `icon${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Create canvases for different sizes
+        const sizes = [16, 48, 128];
+        const container = document.getElementById('canvases');
+        
+        sizes.forEach(size => {
+            const div = document.createElement('div');
+            div.style.display = 'inline-block';
+            div.style.margin = '10px';
+            div.style.textAlign = 'center';
+            
+            const canvas = createIcon(size);
+            const button = document.createElement('button');
+            button.textContent = `Baixar ${size}x${size}px`;
+            button.onclick = () => downloadIcon(size);
+            
+            div.appendChild(canvas);
+            div.appendChild(document.createElement('br'));
+            div.appendChild(button);
+            div.appendChild(document.createElement('br'));
+            div.appendChild(document.createElement('small')).textContent = `icon${size}.png`;
+            
+            container.appendChild(div);
+        });
+    </script>
+</body>
+</html>

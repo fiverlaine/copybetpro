@@ -1,0 +1,27 @@
+{
+  "name": "COPYBETPRO - Sistema de Trading Profissional",
+  "short_name": "COPYBETPRO",
+  "description": "Sistema de Trading Profissional para Betfair",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/sigatrader-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity", "utilities"],
+  "lang": "pt-BR"
+}
+
