@@ -142,20 +142,20 @@ function MobileNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-700 z-50">
-      <div className="flex items-center justify-around px-4 py-3">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-700 z-[9999]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="flex items-center justify-around px-2 py-2 pb-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 ${
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 min-w-[70px] ${
                 isActive ? 'text-primary' : 'text-gray-400'
               }`}
             >
               <item.icon />
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-xs font-medium whitespace-nowrap">{item.label}</span>
             </Link>
           );
         })}
@@ -164,10 +164,10 @@ function MobileNav() {
             sessionStorage.removeItem('session_user');
             navigate('/login');
           }}
-          className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-gray-400 transition-all duration-200"
+          className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-gray-400 transition-all duration-200 min-w-[70px]"
         >
           <Icons.Logout />
-          <span className="text-xs font-medium">Sair</span>
+          <span className="text-xs font-medium whitespace-nowrap">Sair</span>
         </button>
       </div>
     </nav>
@@ -244,7 +244,7 @@ function UserLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col">
           <Header />
           
-          <main className="flex-1 px-4 md:px-8 py-6 md:py-10 pb-20 md:pb-10">
+          <main className="flex-1 px-4 md:px-8 py-6 md:py-10 pb-24 md:pb-10" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
             <div className="max-w-7xl mx-auto">
               {children}
             </div>

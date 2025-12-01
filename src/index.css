@@ -4,10 +4,19 @@
   color-scheme: dark;
 }
 
+/* Suporte para safe-area em dispositivos iOS */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 body {
   background: linear-gradient(180deg, #0a0e1a 0%, #050810 100%);
   background-attachment: fixed;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
 }
 
 /* Tipografia moderna */
