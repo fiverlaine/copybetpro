@@ -107,19 +107,17 @@ export function StrategyHistoryModal({ isOpen, onClose, strategyId, strategyName
   }
 
   function getStatusColor(percentage: number): { bg: string; text: string } {
-    if (percentage >= 70) {
+    if (percentage >= 0) {
       return { bg: 'bg-green-500/20', text: 'text-green-400' };
-    } else if (percentage >= 50) {
-      return { bg: 'bg-amber-500/20', text: 'text-amber-400' };
     } else {
       return { bg: 'bg-red-500/20', text: 'text-red-400' };
     }
   }
 
   function getStatusLabel(percentage: number): string {
-    if (percentage >= 70) return 'Alto';
-    if (percentage >= 50) return 'Médio';
-    return 'Baixo';
+    if (percentage >= 10) return 'Excelente';
+    if (percentage >= 0) return 'Lucro';
+    return 'Prejuízo';
   }
 
   if (!isOpen) return null;
