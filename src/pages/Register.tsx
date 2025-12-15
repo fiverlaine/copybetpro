@@ -82,7 +82,7 @@ export function Register() {
     setError(null);
     
     try {
-      // Cria a conta com políticas aceitas via RPC seguro
+      // Cria a conta com políticas aceitas via RPC seguro com retorno JSON
       const { data, error } = await supabase.rpc('create_user_secure', {
         p_full_name: form.full_name,
         p_email: form.email,
@@ -98,8 +98,8 @@ export function Register() {
         return;
       }
 
-      // RPC retorna um array, pegamos o primeiro item
-      const user = Array.isArray(data) ? data[0] : data;
+      // RPC agora retorna um objeto JSON diretamente (não array)
+      const user = data;
 
       if (user) {
         // Login automático após registro
