@@ -26,11 +26,7 @@ const BarChartIcon = () => (
   </svg>
 );
 
-const TrendingUpIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-  </svg>
-);
+
 
 const CloseIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +156,7 @@ export function StrategyHistoryModal({ isOpen, onClose, strategyId, strategyName
             <>
               {/* Estatísticas */}
               {history.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="glass-card p-4">
                     <div className="text-gray-400 text-sm mb-1">Média Geral</div>
                     <div className="text-3xl font-bold text-white">{stats.average.toFixed(1)}%</div>
@@ -168,13 +164,6 @@ export function StrategyHistoryModal({ isOpen, onClose, strategyId, strategyName
                   <div className="glass-card p-4">
                     <div className="text-gray-400 text-sm mb-1">Melhor Mês</div>
                     <div className="text-3xl font-bold text-green-400">{stats.bestMonth.toFixed(1)}%</div>
-                  </div>
-                  <div className="glass-card p-4">
-                    <div className="text-gray-400 text-sm mb-1">Tendência</div>
-                    <div className={`text-3xl font-bold flex items-center gap-2 ${stats.trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      <TrendingUpIcon />
-                      {stats.trend >= 0 ? '+' : ''}{stats.trend.toFixed(1)}%
-                    </div>
                   </div>
                 </div>
               )}
