@@ -82,15 +82,15 @@ export function Register() {
     setError(null);
     
     try {
-      // Cria a conta com políticas aceitas
-      const { data, error } = await supabase.from('users').insert({
-        full_name: form.full_name,
-        email: form.email,
-        phone: formatBrazilPhoneForStorage(form.phone),
-        password: form.password,
-        policies_accepted: true,
-        policies_accepted_at: new Date().toISOString(),
-      }).select('*').maybeSingle();
+      // Cria a conta com políticas aceitas via RPC seguro
+      const { data, error } = await supabase.rpc('create_user_secure', {
+        p_full_name: form.full_name,
+        p_email: form.email,
+        p_phone: formatBrazilPhoneForStorage(form.phone),
+        p_password: form.password,
+        p_policies_accepted: true,
+        p_policies_accepted_at: new Date().toISOString(),
+      });
 
       if (error) {
         setError(error.message);
@@ -98,11 +98,18 @@ export function Register() {
         return;
       }
 
-      if (data) {
+      // RPC retorna um array, pegamos o primeiro item
+      const user = Array.isArray(data) ? data[0] : data;
+
+      if (user) {
         // Login automático após registro
-        setSessionUser(data);
+        setSessionUser(user);
         setShowPoliciesModal(false);
         navigate('/dashboard');
+      } else {
+         // Fallback caso não retorne dados (embora deva retornar)
+         setError('Erro inesperado ao criar conta.');
+         setLoading(false);
       }
     } catch (err) {
       setError('Erro ao criar conta. Tente novamente.');

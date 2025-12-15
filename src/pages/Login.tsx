@@ -45,12 +45,10 @@ export function Login() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', form.email)
-      .eq('password', form.password)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('login_user_secure', {
+      p_email: form.email,
+      p_password: form.password
+    });
     setLoading(false);
 
     if (error) {
@@ -58,16 +56,19 @@ export function Login() {
       return;
     }
 
-    if (!data) {
+    // RPC retorna um array, pegamos o primeiro item
+    const user = Array.isArray(data) ? data[0] : data;
+
+    if (!user) {
       setError('Credenciais inválidas.');
       return;
     }
 
-    setSessionUser(data);
-    setUserData(data);
+    setSessionUser(user);
+    setUserData(user);
 
     // Se o usuário não aceitou as políticas, mostra o modal
-    if (!data.policies_accepted) {
+    if (!user.policies_accepted) {
       setShowPoliciesModal(true);
     } else {
       navigate('/dashboard');

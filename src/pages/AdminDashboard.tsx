@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { RealtimeNotification } from '../components/RealtimeNotification';
+// import { RealtimeNotification } from '../components/RealtimeNotification';
 
 interface User {
   id: string;
@@ -117,30 +117,48 @@ export function AdminDashboard() {
   const [usersPerPage, setUsersPerPage] = useState(10);
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [alertingUser, setAlertingUser] = useState<string | null>(null);
-  const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+  // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
 
   // Verifica se está autenticado como admin
   useEffect(() => {
     const adminSession = sessionStorage.getItem('admin_session');
     if (!adminSession) {
       navigate('/a1c909fe301e7082');
+    } else {
+      // Verifica se tem a senha na sessão (migração de segurança)
+      const session = JSON.parse(adminSession);
+      if (!session.password) {
+        sessionStorage.removeItem('admin_session');
+        navigate('/a1c909fe301e7082');
+      }
     }
   }, [navigate]);
+
+  // Helper para pegar a senha da sessão
+  const getAdminPassword = () => {
+    const adminSession = sessionStorage.getItem('admin_session');
+    if (!adminSession) return '';
+    const session = JSON.parse(adminSession);
+    return session.password || '';
+  };
 
   // Carrega os usuários
   const loadUsers = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const password = getAdminPassword();
+      const { data, error } = await supabase.rpc('get_all_users_secure', {
+        p_admin_secret: password
+      });
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers((data as unknown as User[]) || []);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar usuários');
+      if (err.message && err.message.includes('Acesso negado')) {
+         handleLogout();
+      }
     } finally {
       setLoading(false);
     }
@@ -149,7 +167,9 @@ export function AdminDashboard() {
   useEffect(() => {
     loadUsers();
 
-    // Configura subscription em tempo real para mudanças na tabela users
+    // NOTE: Realtime subscription removido pois RLS bloqueia acesso anônimo
+    // Para reativar, seria necessário implementar autenticação real via Supabase Auth
+    /*
     const subscription = supabase
       .channel('users_changes')
       .on('postgres_changes', 
@@ -173,10 +193,10 @@ export function AdminDashboard() {
       )
       .subscribe();
 
-    // Cleanup da subscription
     return () => {
       subscription.unsubscribe();
     };
+    */
   }, []);
 
   // Aplicar filtros
@@ -291,17 +311,13 @@ export function AdminDashboard() {
     setAlertingUser(user.id);
     try {
       const newAlertStatus = !user.account_alert;
-      const updateData: any = { account_alert: newAlertStatus };
+      const password = getAdminPassword();
       
-      // Se estiver ativando o alerta, desativa o sistema automaticamente
-      if (newAlertStatus) {
-        updateData.system_enabled = false;
-      }
-
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', user.id);
+      const { error } = await supabase.rpc('toggle_user_alert_secure', {
+        p_admin_secret: password,
+        p_user_id: user.id,
+        p_alert_status: newAlertStatus
+      });
 
       if (error) throw error;
       
@@ -324,12 +340,14 @@ export function AdminDashboard() {
   return (
     <>
       {/* Notificação em tempo real */}
+      {/* Notificação em tempo real - Desativado temporariamente
       {realtimeNotification && (
         <RealtimeNotification 
           message={realtimeNotification.message}
           type={realtimeNotification.type}
         />
       )}
+      */}
       
     <div className="min-h-screen p-4 md:p-8">
       {/* Background decorativo admin */}

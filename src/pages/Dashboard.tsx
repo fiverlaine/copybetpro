@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { RealtimeNotification } from '../components/RealtimeNotification';
+// import { RealtimeNotification } from '../components/RealtimeNotification';
 import { PoliciesModal } from '../components/PoliciesModal';
 import { setSessionUser } from '../lib/session';
 
@@ -36,23 +36,27 @@ export function Dashboard() {
   const user = raw ? JSON.parse(raw) : null;
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
-  const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+  // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
   const [policiesLoading, setPoliciesLoading] = useState(false);
 
   // Verifica se o usuário aceitou as políticas e se tem alerta de conta incorreta
+  // Verifica se o usuário aceitou as políticas e se tem alerta de conta incorreta
   useEffect(() => {
     const checkUserStatus = async () => {
-      if (user?.id) {
+      if (user?.id && user?.password) {
         try {
-          // Busca dados atualizados do usuário no banco
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('account_alert, system_enabled, policies_accepted')
-            .eq('id', user.id)
-            .single();
+          // Busca dados atualizados do usuário com RPC seguro
+          const { data, error } = await supabase.rpc('get_my_profile_secure', {
+             p_user_id: user.id,
+             p_password_hash: user.password
+          });
+
+          // RPC retorna array
+          const userData = Array.isArray(data) ? data[0] : data;
 
           if (!error && userData) {
             // Atualiza o usuário na sessão com dados mais recentes
+            // Mantém a senha (hash) na sessão
             const updatedUser = { ...user, ...userData };
             setSessionUser(updatedUser);
             
@@ -69,6 +73,8 @@ export function Dashboard() {
             } else {
               setShowAlertModal(false);
             }
+          } else if (error) {
+              console.error('Erro RPC:', error);
           }
         } catch (err) {
           console.error('Erro ao verificar status do usuário:', err);
@@ -84,63 +90,21 @@ export function Dashboard() {
 
     checkUserStatus();
 
-    // Configura subscription em tempo real para mudanças do usuário específico
-    const subscription = supabase
-      .channel(`user_${user?.id}_changes`)
-      .on('postgres_changes', 
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'users',
-          filter: `id=eq.${user?.id}`
-        }, 
-        (payload) => {
-          console.log('Mudança detectada no usuário:', payload);
-          
-          // Atualiza dados do usuário na sessão
-          const updatedUser = { ...user, ...payload.new };
-          sessionStorage.setItem('session_user', JSON.stringify(updatedUser));
-          
-          // Atualiza estado do modal baseado no account_alert
-          if (payload.new.account_alert) {
-            setShowAlertModal(true);
-            setRealtimeNotification({
-              message: 'Alerta de credenciais ativado pelo administrador',
-              type: 'warning'
-            });
-          } else {
-            setShowAlertModal(false);
-            setRealtimeNotification({
-              message: 'Alerta de credenciais removido',
-              type: 'success'
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    // Cleanup da subscription
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [user?.id]);
+    // NOTA: Realtime desativado pois requer RLS policy complexa ou auth real
+    // Implementação ideal seria via Supabase Auth
+  }, [user?.id, user?.password]);
 
   // Handler para aceitar políticas
   async function handleAcceptPolicies() {
-    if (!user?.id) return;
+    if (!user?.id || !user?.password) return;
 
     setPoliciesLoading(true);
     try {
-      // Atualiza o usuário no banco de dados
-      const { data, error } = await supabase
-        .from('users')
-        .update({
-          policies_accepted: true,
-          policies_accepted_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
-        .select('*')
-        .single();
+      // Atualiza o usuário no banco de dados via RPC seguro
+      const { data, error } = await supabase.rpc('accept_policies_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password
+      });
 
       if (error) {
         console.error('Erro ao salvar aceitação dos termos:', error);
@@ -148,9 +112,11 @@ export function Dashboard() {
         return;
       }
 
-      if (data) {
+      const updatedData = Array.isArray(data) ? data[0] : data;
+
+      if (updatedData) {
         // Atualiza a sessão com os dados atualizados
-        setSessionUser(data);
+        setSessionUser(updatedData);
         setShowPoliciesModal(false);
         setPoliciesLoading(false);
         // Recarrega a página para garantir que todos os componentes tenham os dados atualizados
@@ -198,12 +164,14 @@ export function Dashboard() {
   return (
     <>
       {/* Notificação em tempo real */}
+      {/* Notificação em tempo real - Desativado
       {realtimeNotification && (
         <RealtimeNotification 
           message={realtimeNotification.message}
           type={realtimeNotification.type}
         />
       )}
+      */}
 
       {/* Modal de Políticas - Obrigatório */}
       <PoliciesModal

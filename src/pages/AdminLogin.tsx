@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 const LockIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,10 +27,6 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-// Credenciais do admin (hardcoded conforme solicitado)
-const ADMIN_EMAIL = 'admin@gmail.com';
-const ADMIN_PASSWORD = 'Matematica123*';
-
 export function AdminLogin() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
@@ -41,22 +38,31 @@ export function AdminLogin() {
     setError(null);
     setLoading(true);
 
-    // Simula um pequeno delay para parecer autenticação real
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Verifica credenciais via RPC
+      const { data: isValid, error: rpcError } = await supabase.rpc('verify_admin_access', {
+        p_secret: form.password
+      });
 
-    if (form.email === ADMIN_EMAIL && form.password === ADMIN_PASSWORD) {
-      // Salva a sessão do admin
-      sessionStorage.setItem('admin_session', JSON.stringify({ 
-        email: ADMIN_EMAIL, 
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }));
-      navigate('/a1c909fe301e7082/dashboard');
-    } else {
-      setError('Credenciais de administrador inválidas.');
+      if (rpcError) throw rpcError;
+
+      if (isValid) {
+        // Salva a sessão do admin
+        sessionStorage.setItem('admin_session', JSON.stringify({ 
+          email: form.email, 
+          role: 'admin',
+          password: form.password, // Salva senha para usar nas requisições seguras
+          loginTime: new Date().toISOString()
+        }));
+        navigate('/a1c909fe301e7082/dashboard');
+      } else {
+        setError('Credenciais de administrador inválidas.');
+      }
+    } catch (err) {
+      setError('Erro ao verificar credenciais.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (

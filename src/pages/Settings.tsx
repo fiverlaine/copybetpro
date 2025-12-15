@@ -94,15 +94,17 @@ export function Settings() {
   const [policiesLoading, setPoliciesLoading] = useState(false);
 
   // Verifica se o usuário aceitou as políticas
+  // Verifica se o usuário aceitou as políticas
   useEffect(() => {
     const checkPolicies = async () => {
-      if (user?.id) {
+      if (user?.id && user?.password) {
         try {
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('policies_accepted')
-            .eq('id', user.id)
-            .single();
+          const { data, error } = await supabase.rpc('get_my_profile_secure', {
+             p_user_id: user.id,
+             p_password_hash: user.password
+          });
+          
+          const userData = Array.isArray(data) ? data[0] : data;
 
           if (!error && userData && !userData.policies_accepted) {
             setShowPoliciesModal(true);
@@ -118,7 +120,7 @@ export function Settings() {
     };
 
     checkPolicies();
-  }, [user?.id, user?.policies_accepted]);
+  }, [user?.id, user?.password, user?.policies_accepted]);
 
   if (!user) {
     return (
@@ -135,28 +137,25 @@ export function Settings() {
 
   // Handler para aceitar políticas
   async function handleAcceptPolicies() {
-    if (!user?.id) return;
+    if (!user?.id || !user?.password) return;
 
     setPoliciesLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .update({
-          policies_accepted: true,
-          policies_accepted_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
-        .select('*')
-        .single();
+      const { data, error } = await supabase.rpc('accept_policies_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password
+      });
 
       if (error) {
         console.error('Erro ao salvar aceitação dos termos:', error);
         setPoliciesLoading(false);
         return;
       }
+      
+      const updatedData = Array.isArray(data) ? data[0] : data;
 
-      if (data) {
-        setSessionUser(data);
+      if (updatedData) {
+        setSessionUser(updatedData);
         setShowPoliciesModal(false);
         setPoliciesLoading(false);
         window.location.reload();
@@ -185,35 +184,44 @@ export function Settings() {
     setLoading(true);
     
     // Se o usuário mudou a conta ou senha e tinha alerta, remove o alerta e pode reativar
-    const updateData: any = {
-      ...form,
-      phone: form.phone ? formatBrazilPhoneForStorage(form.phone) : null,
-    };
+    // (Lógica simples, o RPC já recebe o updateData)
+    // Se mudou credenciais, vamos resetar o alerta (false).
+    let newAccountAlert = form.account_alert;
     if (user?.account_alert && (form.betfair_account !== user.betfair_account || form.betfair_password !== user.betfair_password)) {
-      updateData.account_alert = false;
+       newAccountAlert = false;
     }
     
-    const { data, error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', user.id)
-      .select('*')
-      .maybeSingle();
+    // RPC call
+    const { data, error } = await supabase.rpc('update_user_profile_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password,
+        p_phone: form.phone ? formatBrazilPhoneForStorage(form.phone) : null,
+        p_exchange_type: form.exchange_type,
+        p_betfair_account: form.betfair_account,
+        p_betfair_password: form.betfair_password,
+        p_stake: form.stake,
+        p_system_enabled: form.system_enabled,
+        p_account_alert: newAccountAlert
+    });
+
     setLoading(false);
+    
+    const updatedData = Array.isArray(data) ? data[0] : data;
+
     if (error) {
       setMessage({ type: 'error', text: error.message });
-    } else if (data) {
-      sessionStorage.setItem('session_user', JSON.stringify(data));
+    } else if (updatedData) {
+      sessionStorage.setItem('session_user', JSON.stringify(updatedData));
       setForm({
-        phone: extractBrazilPhoneDigits(data.phone),
-        exchange_type: data.exchange_type || 'betfair',
-        betfair_account: data.betfair_account || '',
-        betfair_password: data.betfair_password || '',
-        stake: data.stake ?? 0,
-        system_enabled: Boolean(data.system_enabled) || false,
-        account_alert: Boolean(data.account_alert) || false,
+        phone: extractBrazilPhoneDigits(updatedData.phone),
+        exchange_type: updatedData.exchange_type || 'betfair',
+        betfair_account: updatedData.betfair_account || '',
+        betfair_password: updatedData.betfair_password || '',
+        stake: updatedData.stake ?? 0,
+        system_enabled: Boolean(updatedData.system_enabled) || false,
+        account_alert: Boolean(updatedData.account_alert) || false,
       });
-      setStakeValue(data.stake?.toString() || '');
+      setStakeValue(updatedData.stake?.toString() || '');
       setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
       setTimeout(() => setMessage(null), 5000);
       

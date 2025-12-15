@@ -121,8 +121,8 @@ export function Strategies() {
     }
   }
 
-  async function handleCopyStrategy(strategyId: string, strategyName: string) {
-    if (!user?.id) return;
+    async function handleCopyStrategy(strategyId: string, strategyName: string) {
+    if (!user?.id || !user?.password) return;
 
     // Validação: verifica se a conta da exchange está configurada
     if (!user.betfair_account || user.betfair_account.trim() === '') {
@@ -132,13 +132,12 @@ export function Strategies() {
 
     setCopyingStrategyId(strategyId);
     try {
-      // Atualiza a estratégia selecionada do usuário no banco
-      const { data, error } = await supabase
-        .from('users')
-        .update({ selected_strategy: strategyId })
-        .eq('id', user.id)
-        .select('*')
-        .single();
+      // Atualiza a estratégia selecionada via RPC seguro
+      const { data, error } = await supabase.rpc('update_user_strategy_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password,
+        p_strategy_id: strategyId
+      });
 
       if (error) {
         console.error('Erro ao copiar estratégia:', error);
@@ -146,11 +145,13 @@ export function Strategies() {
         return;
       }
 
-      if (data) {
+      const updatedUser = Array.isArray(data) ? data[0] : data;
+
+      if (updatedUser) {
         // Atualiza o usuário na sessão
-        setSessionUser(data);
+        setSessionUser(updatedUser);
         // Atualiza o estado local do usuário
-        setUser(data);
+        setUser(updatedUser);
         setNotification({ 
           message: `Estratégia "${strategyName}" ativada com sucesso!`, 
           type: 'success' 
@@ -168,15 +169,15 @@ export function Strategies() {
   }
 
   async function handleStopCopying() {
-    if (!user?.id) return;
+    if (!user?.id || !user?.password) return;
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .update({ selected_strategy: null })
-        .eq('id', user.id)
-        .select('*')
-        .single();
+      // Atualiza via RPC passado NULL
+      const { data, error } = await supabase.rpc('update_user_strategy_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password,
+        p_strategy_id: null
+      });
 
       if (error) {
         console.error('Erro ao parar de copiar:', error);
@@ -184,10 +185,12 @@ export function Strategies() {
         return;
       }
 
-      if (data) {
-        setSessionUser(data);
+      const updatedUser = Array.isArray(data) ? data[0] : data;
+
+      if (updatedUser) {
+        setSessionUser(updatedUser);
         // Atualiza o estado local do usuário
-        setUser(data);
+        setUser(updatedUser);
         setNotification({ 
           message: 'Você parou de copiar a estratégia', 
           type: 'success' 
