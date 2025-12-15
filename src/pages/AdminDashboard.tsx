@@ -15,6 +15,8 @@ interface User {
   exchange_type: string;
   account_alert: boolean;
   created_at: string;
+  ip_address: string | null;
+  location: string | null;
 }
 
 const ShieldIcon = () => (
@@ -541,6 +543,7 @@ export function AdminDashboard() {
                 <thead className="bg-gray-800/50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Usuário</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Localização / IP</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Telefone</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Exchange</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Conta</th>
@@ -558,6 +561,14 @@ export function AdminDashboard() {
                         <div>
                           <div className="font-medium text-white">{user.full_name}</div>
                           <div className="text-sm text-gray-400">{user.email}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                           <div className="text-sm text-gray-300">{user.location || '-'}</div>
+                           {user.ip_address && (
+                             <div className="text-xs text-gray-500 font-mono mt-1">{user.ip_address}</div>
+                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4">

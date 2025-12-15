@@ -82,6 +82,24 @@ export function Register() {
     setError(null);
     
     try {
+      // Captura IP e Localização
+      let ipAddress = null;
+      let location = null;
+      
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        if (response.ok) {
+           const ipData = await response.json();
+           ipAddress = ipData.ip;
+           // Formata: "São Paulo, SP - BR"
+           if (ipData.city) {
+             location = `${ipData.city}, ${ipData.region_code || ''} - ${ipData.country_code || ''}`;
+           }
+        }
+      } catch (err) {
+        console.warn('Erro ao obter localização:', err);
+      }
+
       // Cria a conta com políticas aceitas via RPC seguro com retorno JSON
       const { data, error } = await supabase.rpc('create_user_secure', {
         p_full_name: form.full_name,
@@ -90,6 +108,8 @@ export function Register() {
         p_password: form.password,
         p_policies_accepted: true,
         p_policies_accepted_at: new Date().toISOString(),
+        p_ip_address: ipAddress,
+        p_location: location
       });
 
       if (error) {
