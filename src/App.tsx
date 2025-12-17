@@ -131,7 +131,13 @@ function Sidebar() {
 function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user] = useState<any>(() => getSessionUser());
+  const [user, setUser] = useState<any>(() => getSessionUser());
+
+  useEffect(() => {
+    const handler = () => setUser(getSessionUser());
+    window.addEventListener('session_user_changed', handler);
+    return () => window.removeEventListener('session_user_changed', handler);
+  }, []);
 
   if (!user) return null;
 
