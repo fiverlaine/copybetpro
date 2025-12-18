@@ -317,6 +317,7 @@ export function Settings() {
                 <option value="betfair">Betfair</option>
                 <option value="bolsa">Bolsa</option>
                 <option value="fulltbet">FullTbet</option>
+                <option value="betbra">Betbra</option>
               </select>
             </div>
             <p className="text-xs text-gray-400 mt-2">
@@ -333,13 +334,13 @@ export function Settings() {
             </div>
             <div>
               <h3 className="font-semibold text-white">Credenciais da Exchange</h3>
-              <p className="text-sm text-gray-400">Configure suas informações de acesso à {form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : 'FullTbet'}</p>
+              <p className="text-sm text-gray-400">Configure suas informações de acesso à {form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : form.exchange_type === 'betbra' ? 'Betbra' : 'FullTbet'}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="label-modern">Conta {form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : 'FullTbet'}</label>
+              <label className="label-modern">Conta {form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : form.exchange_type === 'betbra' ? 'Betbra' : 'FullTbet'}</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                   <UserIcon />
@@ -347,7 +348,7 @@ export function Settings() {
                 <input 
                   type="text"
                   className="input-modern"
-                  placeholder={`Seu usuário ${form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : 'FullTbet'}`}
+                  placeholder={`Seu usuário ${form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : form.exchange_type === 'betbra' ? 'Betbra' : 'FullTbet'}`}
                   value={form.betfair_account}
                   onChange={(e) => setForm({ ...form, betfair_account: e.target.value })}
                 />
@@ -355,7 +356,7 @@ export function Settings() {
             </div>
 
             <div>
-              <label className="label-modern">Senha da conta {form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : 'FullTbet'}</label>
+              <label className="label-modern">Senha da conta {form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : form.exchange_type === 'betbra' ? 'Betbra' : 'FullTbet'}</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                   <KeyIcon />
@@ -363,7 +364,7 @@ export function Settings() {
                 <input 
                   type={showPassword ? "text" : "password"}
                   className="input-modern pr-12"
-                  placeholder={`Senha da ${form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : 'FullTbet'}`}
+                  placeholder={`Senha da ${form.exchange_type === 'betfair' ? 'Betfair' : form.exchange_type === 'bolsa' ? 'Bolsa' : form.exchange_type === 'betbra' ? 'Betbra' : 'FullTbet'}`}
                   value={form.betfair_password}
                   onChange={(e) => setForm({ ...form, betfair_password: e.target.value })}
                 />

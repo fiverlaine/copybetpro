@@ -294,6 +294,8 @@ export function AdminDashboard() {
       url = `https://bolsadeaposta.bet.br/b/exchange?autologin=${encoded}`;
     } else if (user.exchange_type === 'fulltbet') {
       url = `https://fulltbet.bet.br/b/exchange?autologin=${encoded}`;
+    } else if (user.exchange_type === 'betbra') {
+      url = `https://betbra.bet.br/b/exchange?autologin=${encoded}`;
     }
 
     window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
@@ -597,6 +599,7 @@ export function AdminDashboard() {
                             user.exchange_type === 'betfair' ? 'bg-green-500/20 text-green-400' :
                             user.exchange_type === 'bolsa' ? 'bg-blue-500/20 text-blue-400' :
                             user.exchange_type === 'fulltbet' ? 'bg-purple-500/20 text-purple-400' :
+                            user.exchange_type === 'betbra' ? 'bg-orange-500/20 text-orange-400' :
                             'bg-gray-500/20 text-gray-400'
                           }`}>
                             {user.exchange_type ? user.exchange_type.toUpperCase() : 'BETFAIR'}
