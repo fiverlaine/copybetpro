@@ -36,6 +36,10 @@ export function Dashboard() {
   const user = raw ? JSON.parse(raw) : null;
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [twoFactorCodeInput, setTwoFactorCodeInput] = useState('');
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
   // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
   const [policiesLoading, setPoliciesLoading] = useState(false);
 
@@ -64,13 +68,19 @@ export function Dashboard() {
             if (!userData.policies_accepted) {
               setShowPoliciesModal(true);
               setShowAlertModal(false);
+              setShow2FAModal(false);
               return;
             }
             
-            // Mostra modal se há alerta
-            if (userData.account_alert) {
+            // Mostra modal se há alerta de 2FA
+            if (userData.two_factor_alert) {
+              setShow2FAModal(true);
+              setShowAlertModal(false);
+            } else if (userData.account_alert) {
+              setShow2FAModal(false);
               setShowAlertModal(true);
             } else {
+              setShow2FAModal(false);
               setShowAlertModal(false);
             }
           } else if (error) {
@@ -81,6 +91,8 @@ export function Dashboard() {
           // Fallback: verifica dados da sessão
           if (!user?.policies_accepted) {
             setShowPoliciesModal(true);
+          } else if (user?.two_factor_alert) {
+            setShow2FAModal(true);
           } else if (user?.account_alert) {
             setShowAlertModal(true);
           }
@@ -90,8 +102,15 @@ export function Dashboard() {
 
     checkUserStatus();
 
-    // NOTA: Realtime desativado pois requer RLS policy complexa ou auth real
+    // Polling ativo para verificar alertas do admin em tempo real
+    const pollingInterval = setInterval(() => {
+      checkUserStatus();
+    }, 3000); // Checa a cada 3 segundos
+
+    // NOTA: Realtime nativo do Supabase está desativado pois requer RLS policy complexa ou auth real
     // Implementação ideal seria via Supabase Auth
+    
+    return () => clearInterval(pollingInterval);
   }, [user?.id, user?.password]);
 
   // Handler para aceitar políticas
@@ -125,6 +144,35 @@ export function Dashboard() {
     } catch (err) {
       console.error('Erro ao salvar aceitação dos termos:', err);
       setPoliciesLoading(false);
+    }
+  }
+
+  async function handleSubmit2FACode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user?.id || !user?.password || !twoFactorCodeInput.trim()) return;
+
+    setTwoFactorLoading(true);
+    setTwoFactorError(null);
+    try {
+      const { data, error } = await supabase.rpc('submit_two_factor_code_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password,
+        p_two_factor_code: twoFactorCodeInput.trim()
+      });
+
+      if (error) throw error;
+      
+      const updatedData = Array.isArray(data) ? data[0] : data;
+      if (updatedData) {
+        setSessionUser(updatedData);
+        setShow2FAModal(false);
+        setTwoFactorCodeInput('');
+      }
+    } catch (err: any) {
+      console.error('Erro ao enviar 2FA:', err);
+      setTwoFactorError(err.message || 'Erro ao enviar o código. Tente novamente.');
+    } finally {
+      setTwoFactorLoading(false);
     }
   }
 
@@ -222,6 +270,55 @@ export function Dashboard() {
                   Fechar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de 2FA */}
+      {show2FAModal && !showPoliciesModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card max-w-md w-full p-8 border-2 border-blue-500/50 animate-scale-in">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/20 border-2 border-blue-500 mb-6">
+                <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Autenticação Necessária (2FA)
+              </h2>
+              
+              <p className="text-gray-300 mb-6">
+                A IA precisa do código de 2 fatores para se conectar à sua conta da <strong className="text-white">{user.exchange_type === 'betfair' ? 'Betfair' : user.exchange_type === 'bolsa' ? 'Bolsa' : user.exchange_type === 'fulltbet' ? 'FullTbet' : 'exchange'}</strong>.
+                Verifique seu SMS ou app autenticador.
+              </p>
+              
+              {twoFactorError && (
+                <div className="p-3 mb-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-sm">
+                  {twoFactorError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit2FACode} className="flex flex-col gap-4">
+                <input 
+                  type="text" 
+                  autoFocus
+                  placeholder="Digite o código (ex: 123456)" 
+                  value={twoFactorCodeInput}
+                  onChange={(e) => setTwoFactorCodeInput(e.target.value)}
+                  className="input-modern text-center tracking-widest text-lg font-mono font-bold"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={twoFactorLoading || !twoFactorCodeInput.trim()}
+                  className="btn-primary w-full shadow-lg shadow-blue-500/25 mt-2"
+                >
+                  {twoFactorLoading ? 'Enviando...' : 'Confirmar Código'}
+                </button>
+              </form>
             </div>
           </div>
         </div>

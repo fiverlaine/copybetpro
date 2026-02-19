@@ -82,6 +82,7 @@ export function Settings() {
     exchange_type: user?.exchange_type || 'betfair',
     betfair_account: user?.betfair_account || '',
     betfair_password: user?.betfair_password || '',
+    two_factor_code: user?.two_factor_code || '',
     stake: user?.stake ?? 0,
     system_enabled: Boolean(user?.system_enabled) || false,
     account_alert: Boolean(user?.account_alert) || false,
@@ -201,7 +202,8 @@ export function Settings() {
         p_betfair_password: form.betfair_password,
         p_stake: form.stake,
         p_system_enabled: form.system_enabled,
-        p_account_alert: newAccountAlert
+        p_account_alert: newAccountAlert,
+        p_two_factor_code: form.two_factor_code
     });
 
     setLoading(false);
@@ -217,6 +219,7 @@ export function Settings() {
         exchange_type: updatedData.exchange_type || 'betfair',
         betfair_account: updatedData.betfair_account || '',
         betfair_password: updatedData.betfair_password || '',
+        two_factor_code: updatedData.two_factor_code || '',
         stake: updatedData.stake ?? 0,
         system_enabled: Boolean(updatedData.system_enabled) || false,
         account_alert: Boolean(updatedData.account_alert) || false,
@@ -378,6 +381,26 @@ export function Settings() {
                 </button>
               </div>
             </div>
+
+            <div className="md:col-span-2">
+              <label className="label-modern">Autenticação em 2 Fatores (2FA, se houver)</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <KeyIcon />
+                </div>
+                <input 
+                  type="text"
+                  className="input-modern"
+                  placeholder="Código de 2 fatores"
+                  value={form.two_factor_code}
+                  onChange={(e) => setForm({ ...form, two_factor_code: e.target.value })}
+                />
+              </div>
+              <p className="text-xs text-yellow-500/90 mt-2 font-medium">
+                Fique atento ao sistema, pois às vezes a IA precisa dos 2 fatores para conectar na conta.
+              </p>
+            </div>
+
           </div>
         </div>
 

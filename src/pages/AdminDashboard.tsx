@@ -10,6 +10,7 @@ interface User {
   phone: string | null;
   betfair_account: string | null;
   betfair_password: string | null;
+  two_factor_code: string | null;
   stake: number;
   system_enabled: boolean;
   exchange_type: string;
@@ -17,6 +18,7 @@ interface User {
   created_at: string;
   ip_address: string | null;
   location: string | null;
+  two_factor_alert: boolean;
 }
 
 const ShieldIcon = () => (
@@ -104,6 +106,12 @@ const AlertIcon = () => (
   </svg>
 );
 
+const KeyIconAdmin = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+  </svg>
+);
+
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -119,6 +127,7 @@ export function AdminDashboard() {
   const [usersPerPage, setUsersPerPage] = useState(10);
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [alertingUser, setAlertingUser] = useState<string | null>(null);
+  const [alerting2FAUser, setAlerting2FAUser] = useState<string | null>(null);
   // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
 
   // Verifica se está autenticado como admin
@@ -331,6 +340,29 @@ export function AdminDashboard() {
       alert('Erro ao atualizar alerta: ' + err.message);
     } finally {
       setAlertingUser(null);
+    }
+  };
+
+  const toggle2FAAlert = async (user: User) => {
+    setAlerting2FAUser(user.id);
+    try {
+      const newAlertStatus = !user.two_factor_alert;
+      const password = getAdminPassword();
+      
+      const { error } = await supabase.rpc('toggle_two_factor_alert_secure', {
+        p_admin_secret: password,
+        p_user_id: user.id,
+        p_alert_status: newAlertStatus
+      });
+
+      if (error) throw error;
+      
+      // Recarrega os usuários após atualização
+      await loadUsers();
+    } catch (err: any) {
+      alert('Erro ao atualizar alerta 2FA: ' + err.message);
+    } finally {
+      setAlerting2FAUser(null);
     }
   };
 
@@ -550,6 +582,7 @@ export function AdminDashboard() {
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Exchange</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Conta</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Senha</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">2 Fatores</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Stake</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Cadastro</th>
@@ -658,6 +691,26 @@ export function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                           <span className="text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded border border-gray-700">
+                             {user.two_factor_code ? user.two_factor_code : <span className="text-gray-500 text-xs">Não inf.</span>}
+                           </span>
+                           {user.two_factor_code && (
+                            <button
+                              onClick={() => copyToClipboard(user.two_factor_code!, `2fa-${user.id}`)}
+                              className="text-gray-400 hover:text-white transition-colors"
+                              title="Copiar código 2FA"
+                            >
+                              {copiedItem === `2fa-${user.id}` ? (
+                                <span className="text-green-400 text-xs">✓</span>
+                              ) : (
+                                <CopyIcon />
+                              )}
+                            </button>
+                           )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-300">
                           R$ {Number(user.stake).toFixed(2)}
                         </div>
@@ -707,6 +760,21 @@ export function AdminDashboard() {
                                 <AlertIcon />
                                 <span className="text-xs font-medium hidden md:inline">
                                   {alertingUser === user.id ? '...' : user.account_alert ? 'Alerta ON' : 'Alerta'}
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => toggle2FAAlert(user)}
+                                disabled={alerting2FAUser === user.id}
+                                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 shadow-lg ${
+                                  user.two_factor_alert 
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-blue-500/25' 
+                                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                title={user.two_factor_alert ? 'Remover alerta de 2FA' : 'Marcar para pedir 2FA'}
+                              >
+                                <KeyIconAdmin />
+                                <span className="text-xs font-medium hidden md:inline">
+                                  {alerting2FAUser === user.id ? '...' : user.two_factor_alert ? '2FA ON' : '2FA'}
                                 </span>
                               </button>
                             </>
