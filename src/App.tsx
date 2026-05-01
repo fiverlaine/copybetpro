@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getSessionUser, clearSessionUser } from './lib/session';
+import { getSessionUser } from './lib/session';
 import './index.css';
 import { Register } from './pages/Register';
 import { Login } from './pages/Login';
@@ -76,7 +76,6 @@ function Logo() {
 
 // ── Sidebar ──
 function Sidebar() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<any>(() => getSessionUser());
 
@@ -86,10 +85,7 @@ function Sidebar() {
     return () => window.removeEventListener('session_user_changed', handler);
   }, []);
 
-  const handleLogout = () => {
-    clearSessionUser();
-    navigate('/login');
-  };
+
 
   if (!user) return null;
 
@@ -179,7 +175,6 @@ function Sidebar() {
 
 // ── Mobile Navigation ──
 function MobileNav() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<any>(() => getSessionUser());
 

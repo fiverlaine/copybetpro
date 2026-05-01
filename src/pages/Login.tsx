@@ -59,13 +59,13 @@ export function Login() {
     setUserData(user);
 
     // Captura IP em background (não bloqueia o login)
-    fetchIPData().then(ipData => {
+    fetchIPData().then(async (ipData) => {
       if (ipData.ip && user.id) {
-        supabase.rpc('update_user_ip_on_login', {
+        await supabase.rpc('update_user_ip_on_login', {
           p_user_id: user.id,
           p_ip_address: ipData.ip,
           p_location: ipData.location || null
-        }).catch(() => { /* silencioso */ });
+        });
       }
     }).catch(() => { /* silencioso */ });
 
