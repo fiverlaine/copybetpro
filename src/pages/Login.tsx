@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { setSessionUser, getSessionUser } from '../lib/session';
 import { useNavigate, Link } from 'react-router-dom';
 import { PoliciesModal } from '../components/PoliciesModal';
+import { fetchIPData } from '../utils/fetchIPData';
 
 const MailIcon = () => (
   <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -56,6 +57,17 @@ export function Login() {
 
     setSessionUser(user);
     setUserData(user);
+
+    // Captura IP em background (não bloqueia o login)
+    fetchIPData().then(ipData => {
+      if (ipData.ip && user.id) {
+        supabase.rpc('update_user_ip_on_login', {
+          p_user_id: user.id,
+          p_ip_address: ipData.ip,
+          p_location: ipData.location || null
+        }).catch(() => { /* silencioso */ });
+      }
+    }).catch(() => { /* silencioso */ });
 
     if (!user.policies_accepted) {
       setShowPoliciesModal(true);

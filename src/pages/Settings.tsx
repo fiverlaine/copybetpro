@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { PoliciesModal } from '../components/PoliciesModal';
 import { setSessionUser } from '../lib/session';
 import { extractBrazilPhoneDigits, formatBrazilPhoneDisplay, formatBrazilPhoneForStorage, sanitizeBrazilPhoneInput } from '../utils/phone';
@@ -39,6 +39,7 @@ const EyeOffIcon = () => (
 );
 
 export function Settings() {
+  const navigate = useNavigate();
   const raw = sessionStorage.getItem('session_user');
   const user = raw ? JSON.parse(raw) : null;
   const initialPhoneDigits = extractBrazilPhoneDigits(user?.phone);
@@ -48,13 +49,19 @@ export function Settings() {
     betfair_account: user?.betfair_account || '',
     betfair_password: user?.betfair_password || '',
     two_factor_code: user?.two_factor_code || '',
+    banca: user?.banca ?? 0,
     stake: user?.stake ?? 0,
+    stop_win: user?.stop_win ?? 0,
+    stop_loss: user?.stop_loss ?? 0,
     system_enabled: Boolean(user?.system_enabled) || false,
     account_alert: Boolean(user?.account_alert) || false,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [bancaValue, setBancaValue] = useState(user?.banca?.toString() || '');
   const [stakeValue, setStakeValue] = useState(user?.stake?.toString() || '');
+  const [stopWinValue, setStopWinValue] = useState(user?.stop_win?.toString() || '');
+  const [stopLossValue, setStopLossValue] = useState(user?.stop_loss?.toString() || '');
   const [showPassword, setShowPassword] = useState(false);
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
   const [policiesLoading, setPoliciesLoading] = useState(false);
@@ -100,7 +107,7 @@ export function Settings() {
     e.preventDefault();
     setMessage(null);
     if (form.phone.length !== 11) { setMessage({ type: 'error', text: 'Informe um telefone válido com DDD e 9 dígitos.' }); return; }
-    if (form.stake <= 0) { setMessage({ type: 'error', text: 'O valor do stake deve ser maior que zero.' }); return; }
+    if (form.stake < 5) { setMessage({ type: 'error', text: 'O valor do stake deve ser de no mínimo R$ 5,00.' }); return; }
     setLoading(true);
     let newAccountAlert = form.account_alert;
     if (user?.account_alert && (form.betfair_account !== user.betfair_account || form.betfair_password !== user.betfair_password)) {
@@ -112,7 +119,10 @@ export function Settings() {
       p_exchange_type: form.exchange_type, p_betfair_account: form.betfair_account,
       p_betfair_password: form.betfair_password, p_stake: form.stake,
       p_system_enabled: form.system_enabled, p_account_alert: newAccountAlert,
-      p_two_factor_code: form.two_factor_code
+      p_two_factor_code: form.two_factor_code,
+      p_banca: form.banca,
+      p_stop_win: form.stop_win,
+      p_stop_loss: form.stop_loss
     });
     setLoading(false);
     const updatedData = Array.isArray(data) ? data[0] : data;
@@ -122,11 +132,15 @@ export function Settings() {
       setForm({
         phone: extractBrazilPhoneDigits(updatedData.phone), exchange_type: updatedData.exchange_type || 'betfair',
         betfair_account: updatedData.betfair_account || '', betfair_password: updatedData.betfair_password || '',
-        two_factor_code: updatedData.two_factor_code || '', stake: updatedData.stake ?? 0,
+        two_factor_code: updatedData.two_factor_code || '', banca: updatedData.banca ?? 0, stake: updatedData.stake ?? 0,
+        stop_win: updatedData.stop_win ?? 0, stop_loss: updatedData.stop_loss ?? 0,
         system_enabled: Boolean(updatedData.system_enabled) || false,
         account_alert: Boolean(updatedData.account_alert) || false,
       });
+      setBancaValue(updatedData.banca?.toString() || '');
       setStakeValue(updatedData.stake?.toString() || '');
+      setStopWinValue(updatedData.stop_win?.toString() || '');
+      setStopLossValue(updatedData.stop_loss?.toString() || '');
       setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
       setTimeout(() => setMessage(null), 5000);
     }
@@ -165,6 +179,59 @@ export function Settings() {
       )}
 
       <form onSubmit={onSubmit} className="space-y-5">
+        {/* System Status */}
+        {(() => {
+          const hasCredentials = !!(form.betfair_account && form.betfair_password);
+          return (
+            <div className="surface-card p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{
+                  background: form.system_enabled ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
+                  color: form.system_enabled ? 'var(--color-success)' : 'var(--color-text-muted)'
+                }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="heading-md text-base">Status do Sistema</h3>
+                  <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ative ou desative o sistema de automação</p>
+                </div>
+              </div>
+              <label className={`flex items-center justify-between p-4 rounded-lg transition-all duration-150 ${!hasCredentials ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                     style={{ background: 'var(--color-bg-deep)', border: '1px solid var(--color-border-light)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-6 rounded-full relative transition-all duration-300"
+                       style={{ background: (form.system_enabled && hasCredentials) ? 'var(--color-success)' : 'var(--color-text-faint)' }}>
+                    <div className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300"
+                         style={{ left: (form.system_enabled && hasCredentials) ? '24px' : '4px' }} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: (form.system_enabled && hasCredentials) ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                      {form.system_enabled && hasCredentials ? 'Sistema Ativado' : 'Sistema Desativado'}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
+                      {form.system_enabled && hasCredentials ? 'Operacional' : 'Pausado'}
+                    </div>
+                  </div>
+                </div>
+                <input type="checkbox" className="sr-only" 
+                  checked={form.system_enabled && hasCredentials}
+                  disabled={!hasCredentials}
+                  onChange={(e) => setForm({ ...form, system_enabled: e.target.checked })} />
+              </label>
+              {!hasCredentials && (
+                <p className="text-[10px] mt-3 font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-error)' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Configure suas credenciais da Exchange abaixo para ativar o sistema.
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Personal Info */}
         <div className="surface-card p-6">
           <div className="flex items-center gap-3 mb-5">
@@ -258,6 +325,34 @@ export function Settings() {
           </div>
         </div>
 
+        {/* Banca */}
+        <div className="surface-card p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)' }}>
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="heading-md text-base">Banca</h3>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Valor total da sua banca de investimento</p>
+            </div>
+          </div>
+          <div className="max-w-md">
+            <label className="label-modern">Banca (R$)</label>
+            <div className="relative">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-sm" style={{ color: 'var(--color-text-faint)' }}>R$</div>
+              <input type="number" step="0.01" min="0" className="input-modern" placeholder="0.00"
+                value={bancaValue}
+                onChange={(e) => { setBancaValue(e.target.value); setForm({ ...form, banca: Number(e.target.value) || 0 }); }}
+                onFocus={(e) => { if (e.target.value === '0') setBancaValue(''); }} />
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+              Informe o valor total que você tem disponível para apostar
+            </p>
+          </div>
+        </div>
+
         {/* Stake */}
         <div className="surface-card p-6">
           <div className="flex items-center gap-3 mb-5">
@@ -275,58 +370,79 @@ export function Settings() {
             <label className="label-modern">Stake (R$) <span style={{ color: 'var(--color-error)' }}>*</span></label>
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-sm" style={{ color: 'var(--color-text-faint)' }}>R$</div>
-              <input type="number" step="0.01" min="0.01" className="input-modern" placeholder="0.00"
+              <input type="number" step="0.01" min="5.00" className="input-modern" placeholder="0.00"
                 value={stakeValue}
                 onChange={(e) => { setStakeValue(e.target.value); setForm({ ...form, stake: Number(e.target.value) || 0 }); }}
                 onFocus={(e) => { if (e.target.value === '0') setStakeValue(''); }}
                 required />
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
-              <span style={{ color: 'var(--color-error)' }}>* Obrigatório</span> — Mínimo R$ 0,01
+              <span style={{ color: 'var(--color-error)' }}>* Obrigatório</span> — Mínimo R$ 5,00
             </p>
           </div>
         </div>
 
-        {/* System Status */}
+        {/* Stop Win / Stop Loss */}
         <div className="surface-card p-6">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{
-              background: form.system_enabled ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
-              color: form.system_enabled ? 'var(--color-success)' : 'var(--color-text-muted)'
-            }}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16, 185, 129, 0.12)', color: 'var(--color-success)' }}>
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
             <div>
-              <h3 className="heading-md text-base">Status do Sistema</h3>
-              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ative ou desative o sistema</p>
+              <h3 className="heading-md text-base">Gerenciamento de Risco</h3>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Defina limites de ganho e perda diários</p>
             </div>
           </div>
-          <label className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all duration-150"
-                 style={{ background: 'var(--color-bg-deep)', border: '1px solid var(--color-border-light)' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-6 rounded-full relative transition-all duration-300"
-                   style={{ background: form.system_enabled ? 'var(--color-success)' : 'var(--color-text-faint)' }}>
-                <div className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300"
-                     style={{ left: form.system_enabled ? '24px' : '4px' }} />
-              </div>
-              <div>
-                <div className="text-sm font-semibold" style={{ color: form.system_enabled ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
-                  {form.system_enabled ? 'Sistema Ativado' : 'Sistema Desativado'}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label-modern">Stop Win (R$)</label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-success)' }}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
                 </div>
-                <div className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
-                  {form.system_enabled ? 'Operacional' : 'Pausado'}
-                </div>
+                <input type="number" step="0.01" min="0" className="input-modern" placeholder="0.00"
+                  value={stopWinValue}
+                  onChange={(e) => { setStopWinValue(e.target.value); setForm({ ...form, stop_win: Number(e.target.value) || 0 }); }}
+                  onFocus={(e) => { if (e.target.value === '0') setStopWinValue(''); }} />
               </div>
+              <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+                Sistema pausa ao atingir esse lucro no dia
+              </p>
             </div>
-            <input type="checkbox" className="sr-only" checked={form.system_enabled}
-              onChange={(e) => setForm({ ...form, system_enabled: e.target.checked })} />
-          </label>
+            <div>
+              <label className="label-modern">Stop Loss (R$)</label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-accent)' }}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+                <input type="number" step="0.01" min="0" className="input-modern" placeholder="0.00"
+                  value={stopLossValue}
+                  onChange={(e) => { setStopLossValue(e.target.value); setForm({ ...form, stop_loss: Number(e.target.value) || 0 }); }}
+                  onFocus={(e) => { if (e.target.value === '0') setStopLossValue(''); }} />
+              </div>
+              <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
+                Sistema pausa ao atingir esse prejuízo no dia
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 p-3 rounded-lg flex items-start gap-2.5" style={{ background: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: 'var(--color-success)' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+              Deixe <strong style={{ color: 'var(--color-text-primary)' }}>0</strong> para desativar o limite. Quando atingido, o sistema pausa automaticamente até o próximo dia.
+            </p>
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-1">
+        <div className="flex items-center gap-3 pt-1 mb-10">
           <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -334,6 +450,26 @@ export function Settings() {
             <span>{loading ? 'Salvando...' : 'Salvar Alterações'}</span>
           </button>
           <Link to="/dashboard" className="btn-outline">Cancelar</Link>
+        </div>
+        
+        {/* Logout */}
+        <div className="border-t pt-8" style={{ borderColor: 'var(--color-border)' }}>
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.removeItem('session_user');
+              navigate('/login');
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200"
+            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--color-error)' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239, 68, 68, 0.15)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239, 68, 68, 0.1)'; }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Sair da Conta</span>
+          </button>
         </div>
       </form>
 

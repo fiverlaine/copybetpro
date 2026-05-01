@@ -12,6 +12,7 @@ interface User {
   betfair_password: string | null;
   two_factor_code: string | null;
   stake: number;
+  banca: number;
   system_enabled: boolean;
   exchange_type: string;
   account_alert: boolean;
@@ -583,6 +584,7 @@ export function AdminDashboard() {
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Conta</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Senha</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">2 Fatores</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Banca</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Stake</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Cadastro</th>
@@ -708,6 +710,11 @@ export function AdminDashboard() {
                               )}
                             </button>
                            )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-300">
+                          {user.banca ? `R$ ${Number(user.banca).toFixed(2)}` : <span className="text-gray-500">-</span>}
                         </div>
                       </td>
                       <td className="px-6 py-4">

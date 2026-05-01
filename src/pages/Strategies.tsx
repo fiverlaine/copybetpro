@@ -53,8 +53,7 @@ function getStrategyIcon(iconType: string) {
 function getAccentColor(gradient: string): string {
   if (gradient.includes('green') || gradient.includes('emerald')) return 'var(--color-success)';
   if (gradient.includes('blue') || gradient.includes('cyan')) return 'var(--color-teal)';
-  if (gradient.includes('purple') || gradient.includes('violet')) return '#8B5CF6';
-  if (gradient.includes('red') || gradient.includes('rose')) return 'var(--color-error)';
+  if (gradient.includes('purple') || gradient.includes('violet') || gradient.includes('red') || gradient.includes('rose')) return '#8B5CF6';
   if (gradient.includes('orange') || gradient.includes('amber')) return 'var(--color-accent)';
   return 'var(--color-accent)';
 }
@@ -70,6 +69,8 @@ export function Strategies() {
   const [copyingStrategyId, setCopyingStrategyId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showAccountRequiredModal, setShowAccountRequiredModal] = useState(false);
+  const [strategyEnabled, setStrategyEnabled] = useState<boolean>(Boolean(user?.strategy_enabled));
+  const [togglingSystem, setTogglingSystem] = useState(false);
 
   useEffect(() => {
     const handler = () => setUser(getSessionUser());
@@ -126,6 +127,27 @@ export function Strategies() {
         setTimeout(() => setNotification(null), 3000);
       }
     } catch { setNotification({ message: 'Erro ao parar de copiar', type: 'error' }); }
+  }
+
+  async function handleToggleStrategySystem(enabled: boolean) {
+    if (!user?.id) return;
+    setStrategyEnabled(enabled);
+    setTogglingSystem(true);
+    try {
+      const { data, error } = await supabase.rpc('update_user_preferences_secure', {
+        p_user_id: user.id,
+        p_password_hash: user.password,
+        p_strategy_enabled: enabled
+      });
+      if (!error && data) {
+        const updatedUser = Array.isArray(data) ? data[0] : data;
+        if (updatedUser) {
+          setSessionUser(updatedUser);
+          setUser(updatedUser);
+        }
+      }
+    } catch { /* silent */ }
+    finally { setTogglingSystem(false); }
   }
 
   if (!user) return null;
@@ -211,6 +233,44 @@ export function Strategies() {
           </div>
         </div>
 
+        {/* System Toggle */}
+        <div className="surface-card p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{
+              background: strategyEnabled ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.1)',
+              color: strategyEnabled ? 'var(--color-success)' : 'var(--color-text-muted)'
+            }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="heading-md text-base">Sistema de Estratégias</h3>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Ative ou desative o sistema de copy trading</p>
+            </div>
+          </div>
+          <label className="flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all duration-150"
+                 style={{ background: 'var(--color-bg-deep)', border: '1px solid var(--color-border-light)', opacity: togglingSystem ? 0.6 : 1 }}>
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-6 rounded-full relative transition-all duration-300"
+                   style={{ background: strategyEnabled ? 'var(--color-success)' : 'var(--color-text-faint)' }}>
+                <div className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300"
+                     style={{ left: strategyEnabled ? '24px' : '4px' }} />
+              </div>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: strategyEnabled ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                  {strategyEnabled ? 'Sistema Ativado' : 'Sistema Desativado'}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
+                  {strategyEnabled ? 'Copiando estratégias automaticamente' : 'Pausado'}
+                </div>
+              </div>
+            </div>
+            <input type="checkbox" className="sr-only" checked={strategyEnabled}
+              onChange={(e) => handleToggleStrategySystem(e.target.checked)} />
+          </label>
+        </div>
+
         {/* Strategy Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -227,77 +287,105 @@ export function Strategies() {
               const accent = getAccentColor(strategy.color_gradient);
 
               return (
-                <div key={strategy.id} className="surface-card-hover p-5 relative animate-fade-in"
-                     style={{ animationDelay: `${index * 60}ms` }}>
-                  {/* Ranking */}
-                  {ranking && (
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center z-10 text-xs font-bold shadow-lg"
-                         style={{ background: 'var(--color-accent)', color: '#0B1120', border: '2px solid var(--color-bg-deep)' }}>
-                      #{ranking}
-                    </div>
-                  )}
+                <div key={strategy.id} 
+                     className="relative group animate-fade-in flex flex-col h-full rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                     style={{ 
+                       animationDelay: `${index * 60}ms`,
+                       background: 'var(--color-bg-deep)',
+                       border: `1px solid rgba(255, 255, 255, 0.05)`,
+                       boxShadow: `0 8px 32px rgba(0, 0, 0, 0.2)`
+                     }}>
+                  
+                  {/* Subtle top glow based on accent color */}
+                  <div className="absolute top-0 left-0 right-0 h-1 z-0 opacity-70 group-hover:opacity-100 transition-opacity duration-300" 
+                       style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
 
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="absolute top-3 left-3 w-7 h-7 rounded-full flex items-center justify-center z-10"
-                         style={{ background: 'var(--color-accent)', color: '#0B1120', border: '2px solid var(--color-bg-deep)' }}>
-                      <CheckIcon />
-                    </div>
-                  )}
+                  {/* Gradient background overlay for hover effect */}
+                  <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500 pointer-events-none"
+                       style={{ background: `radial-gradient(circle at top right, ${accent}, transparent 70%)` }} />
 
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                         style={{ background: `${accent}20`, color: accent }}>
-                      <IconComponent />
-                    </div>
-                    <div className="px-2.5 py-1 rounded-full text-xs font-bold"
-                         style={{ background: `${accent}15`, color: accent }}>
-                      {percentage.toFixed(1)}%
-                    </div>
-                  </div>
+                  <div className="p-6 relative z-10 flex flex-col flex-grow">
+                    {/* Ranking */}
+                    {ranking && (
+                      <div className="absolute top-4 right-4 px-2.5 py-1 rounded-md flex items-center justify-center text-[10px] font-black uppercase tracking-widest shadow-md backdrop-blur-sm"
+                           style={{ background: 'var(--color-accent)', color: '#000' }}>
+                        #{ranking}
+                      </div>
+                    )}
 
-                  <div className="mb-4">
-                    <h3 className="text-lg font-bold mb-1.5">{strategy.name}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>{strategy.description}</p>
-                  </div>
+                    {/* Active indicator */}
+                    {isActive && (
+                      <div className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
+                           style={{ background: 'var(--color-success)', color: '#000' }}>
+                        <CheckIcon />
+                      </div>
+                    )}
 
-                  {/* Progress Bar */}
-                  <div className="mb-5">
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-deep)' }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                           style={{ width: `${Math.min(percentage, 100)}%`, background: accent }} />
+                    {/* Header */}
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
+                           style={{ background: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}>
+                        <IconComponent />
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="text-2xl font-black tracking-tight" style={{ color: accent, textShadow: `0 0 20px ${accent}40` }}>
+                          {percentage.toFixed(1)}%
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-faint)' }}>
+                          Lucratividade
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2">
-                    <button onClick={() => handleCopyStrategy(strategy.id, strategy.name)}
-                      disabled={copyingStrategyId === strategy.id || isActive || !hasAccountConfigured}
-                      className="px-4 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={{
-                        background: isActive ? 'rgba(16, 185, 129, 0.1)' : !hasAccountConfigured ? 'var(--color-bg-elevated)' : 'var(--color-accent-dim)',
-                        border: `1px solid ${isActive ? 'rgba(16, 185, 129, 0.25)' : !hasAccountConfigured ? 'var(--color-border)' : 'var(--color-border-accent)'}`,
-                        color: isActive ? 'var(--color-success)' : !hasAccountConfigured ? 'var(--color-text-faint)' : 'var(--color-accent)',
-                      }}
-                      title={!hasAccountConfigured ? 'Configure sua conta da Exchange primeiro' : ''}>
-                      {copyingStrategyId === strategy.id ? (
-                        <><div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" /><span>Ativando...</span></>
-                      ) : isActive ? (
-                        <><CheckIcon /><span>Ativa</span></>
-                      ) : !hasAccountConfigured ? (
-                        <span>Configure a Conta</span>
-                      ) : (
-                        <span>Copiar Estratégia</span>
-                      )}
-                    </button>
-                    <button onClick={() => { setSelectedStrategyId(strategy.id); setSelectedStrategyName(strategy.name); setShowHistoryModal(true); }}
-                      className="px-4 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
-                      style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-hover)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-bg-elevated)'; }}>
-                      <BarChartIcon /><span>Histórico Mensal</span>
-                    </button>
+                    <div className="mb-6 flex-grow">
+                      <h3 className="text-xl font-bold mb-2 tracking-tight text-white">{strategy.name}</h3>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{strategy.description}</p>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mb-6">
+                      <div className="h-2 rounded-full overflow-hidden bg-black/40 shadow-inner">
+                        <div className="h-full rounded-full transition-all duration-1000 ease-out relative"
+                             style={{ width: `${Math.min(percentage, 100)}%`, background: accent }}>
+                          {/* Inner glow effect on progress bar */}
+                          <div className="absolute inset-0 opacity-50" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4))' }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2.5 mt-auto">
+                      <button onClick={() => handleCopyStrategy(strategy.id, strategy.name)}
+                        disabled={copyingStrategyId === strategy.id || isActive || !hasAccountConfigured}
+                        className="px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group/btn relative overflow-hidden"
+                        style={{
+                          background: isActive ? 'rgba(16, 185, 129, 0.15)' : !hasAccountConfigured ? 'rgba(255, 255, 255, 0.05)' : `${accent}15`,
+                          border: `1px solid ${isActive ? 'rgba(16, 185, 129, 0.4)' : !hasAccountConfigured ? 'rgba(255, 255, 255, 0.1)' : `${accent}40`}`,
+                          color: isActive ? 'var(--color-success)' : !hasAccountConfigured ? 'var(--color-text-muted)' : accent,
+                        }}
+                        title={!hasAccountConfigured ? 'Configure sua conta da Exchange primeiro' : ''}>
+                        {copyingStrategyId === strategy.id ? (
+                          <><div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" /><span>Ativando...</span></>
+                        ) : isActive ? (
+                          <><CheckIcon /><span>Ativa</span></>
+                        ) : !hasAccountConfigured ? (
+                          <span>Configure a Conta</span>
+                        ) : (
+                          <>
+                            <span className="relative z-10">Copiar Estratégia</span>
+                            {/* Hover effect background */}
+                            <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: `linear-gradient(45deg, transparent, ${accent}20, transparent)` }} />
+                          </>
+                        )}
+                      </button>
+                      <button onClick={() => { setSelectedStrategyId(strategy.id); setSelectedStrategyName(strategy.name); setShowHistoryModal(true); }}
+                        className="px-4 py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 hover:text-white"
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-text-secondary)' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                        <BarChartIcon /><span>Histórico Mensal</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

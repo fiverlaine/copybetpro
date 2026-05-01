@@ -5,6 +5,7 @@ import { setSessionUser } from '../lib/session';
 import { useNavigate, Link } from 'react-router-dom';
 import { PoliciesModal } from '../components/PoliciesModal';
 import { formatBrazilPhoneDisplay, formatBrazilPhoneForStorage, sanitizeBrazilPhoneInput } from '../utils/phone';
+import { fetchIPData } from '../utils/fetchIPData';
 
 const UserIcon = () => (
   <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -72,18 +73,16 @@ export function Register() {
     setLoading(true);
     setError(null);
     try {
+      // Captura IP com 3 fallbacks
       let ipAddress = null;
       let location = null;
       try {
-        const response = await fetch('https://ipapi.co/json/');
-        if (response.ok) {
-          const ipData = await response.json();
+        const ipData = await fetchIPData();
+        if (ipData.ip) {
           ipAddress = ipData.ip;
-          if (ipData.city) {
-            location = `${ipData.city}, ${ipData.region_code || ''} - ${ipData.country_code || ''}`;
-          }
+          location = ipData.location || null;
         }
-      } catch (err) { console.warn('Erro ao obter localização:', err); }
+      } catch { /* sem IP, não bloqueia cadastro */ }
 
       const { data, error } = await supabase.rpc('create_user_secure', {
         p_full_name: form.full_name,
