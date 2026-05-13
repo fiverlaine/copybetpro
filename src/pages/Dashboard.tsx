@@ -35,6 +35,8 @@ export function Dashboard() {
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showBetfairWarning, setShowBetfairWarning] = useState(false);
+  const [showBancaWarning, setShowBancaWarning] = useState(false);
   const [twoFactorCodeInput, setTwoFactorCodeInput] = useState('');
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
@@ -65,15 +67,22 @@ export function Dashboard() {
       const d = Array.isArray(data) ? data[0] : data;
       if (!error && d) {
         setSessionUser({ ...user, ...d });
-        if (!d.policies_accepted) { setShowPoliciesModal(true); setShowAlertModal(false); setShow2FAModal(false); return; }
-        if (d.two_factor_alert) { setShow2FAModal(true); setShowAlertModal(false); }
-        else if (d.account_alert) { setShow2FAModal(false); setShowAlertModal(true); }
-        else { setShow2FAModal(false); setShowAlertModal(false); }
+        if (!d.policies_accepted) { 
+          setShowPoliciesModal(true); setShowAlertModal(false); setShow2FAModal(false); setShowBetfairWarning(false); setShowBancaWarning(false); 
+          return; 
+        }
+        
+        setShow2FAModal(!!d.two_factor_alert);
+        setShowAlertModal(!!d.account_alert && !d.two_factor_alert);
+        setShowBetfairWarning(!!d.betfair_warning_alert && !d.account_alert && !d.two_factor_alert);
+        setShowBancaWarning(!!d.banca_warning_alert && !d.betfair_warning_alert && !d.account_alert && !d.two_factor_alert);
       }
     } catch {
       if (!user?.policies_accepted) setShowPoliciesModal(true);
       else if (user?.two_factor_alert) setShow2FAModal(true);
       else if (user?.account_alert) setShowAlertModal(true);
+      else if (user?.betfair_warning_alert) setShowBetfairWarning(true);
+      else if (user?.banca_warning_alert) setShowBancaWarning(true);
     }
   }, [user?.id, user?.password]);
 
@@ -138,6 +147,63 @@ export function Dashboard() {
                   <SettingsIcon /><span>Ir para Configurações</span>
                 </Link>
                 <button onClick={() => setShowAlertModal(false)} className="btn-outline w-full">Fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Betfair Warning Modal */}
+      {showBetfairWarning && !showPoliciesModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="surface-card max-w-md w-full p-7 animate-scale-in" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-5"
+                   style={{ background: 'rgba(239, 68, 68, 0.12)', border: '2px solid var(--color-error)' }}>
+                <svg className="w-8 h-8" fill="none" stroke="var(--color-error)" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="heading-lg mb-3">Conta não configurada</h2>
+              <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
+                Você ainda não configurou a sua conta da <strong style={{ color: 'var(--color-text-primary)' }}>{exchangeLabel}</strong>. O sistema precisa da sua conta conectada para funcionar.
+              </p>
+              <p className="text-xs mb-7 font-bold" style={{ color: 'var(--color-error)' }}>
+                Aviso: A sua conta será excluída do sistema em 2 dias caso não configure, pois o sistema é limitado e precisa de usuários ativos.
+              </p>
+              <div className="flex flex-col gap-2.5">
+                <Link to="/settings" className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => setShowBetfairWarning(false)}>
+                  <SettingsIcon /><span>Configurar Agora</span>
+                </Link>
+                <button onClick={() => setShowBetfairWarning(false)} className="btn-outline w-full">Entendi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banca Warning Modal */}
+      {showBancaWarning && !showPoliciesModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="surface-card max-w-md w-full p-7 animate-scale-in" style={{ borderColor: 'rgba(249, 115, 22, 0.3)' }}>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-5"
+                   style={{ background: 'rgba(249, 115, 22, 0.12)', border: '2px solid rgba(249, 115, 22, 1)' }}>
+                <svg className="w-8 h-8" fill="none" stroke="rgba(249, 115, 22, 1)" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="heading-lg mb-3">Banca Insuficiente</h2>
+              <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
+                Verificamos que o saldo (banca) na sua conta da <strong style={{ color: 'var(--color-text-primary)' }}>{exchangeLabel}</strong> está abaixo do recomendado.
+              </p>
+              <p className="text-xs mb-7 font-bold" style={{ color: 'rgba(249, 115, 22, 1)' }}>
+                O sistema precisa de pelo menos R$500 de banca para funcionar corretamente e operar com segurança.
+              </p>
+              <div className="flex flex-col gap-2.5">
+                <button onClick={() => setShowBancaWarning(false)} className="btn-primary w-full" style={{ background: 'rgba(249, 115, 22, 1)', color: 'white' }}>
+                  Entendi
+                </button>
               </div>
             </div>
           </div>

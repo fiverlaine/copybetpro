@@ -20,6 +20,16 @@ interface User {
   ip_address: string | null;
   location: string | null;
   two_factor_alert: boolean;
+  betfair_warning_alert: boolean;
+  banca_warning_alert: boolean;
+  tag_color: string | null;
+}
+
+interface CredentialHistory {
+  id: string;
+  betfair_account: string;
+  betfair_password: string;
+  changed_at: string;
 }
 
 const ShieldIcon = () => (
@@ -129,6 +139,18 @@ export function AdminDashboard() {
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [alertingUser, setAlertingUser] = useState<string | null>(null);
   const [alerting2FAUser, setAlerting2FAUser] = useState<string | null>(null);
+  const [alertingBetfairUser, setAlertingBetfairUser] = useState<string | null>(null);
+  const [alertingBancaUser, setAlertingBancaUser] = useState<string | null>(null);
+  const [taggingUser, setTaggingUser] = useState<string | null>(null);
+
+  const [tagNames, setTagNames] = useState({ red: '🔴 VIP / Perigo', green: '🟢 Ativo / Seguro', blue: '🔵 Suporte', purple: '🟣 Premium' });
+  const [showTagConfigModal, setShowTagConfigModal] = useState(false);
+  const [editingTagNames, setEditingTagNames] = useState({ ...tagNames });
+  const [savingTags, setSavingTags] = useState(false);
+
+  const [showHistoryModal, setShowHistoryModal] = useState<string | null>(null);
+  const [credentialHistory, setCredentialHistory] = useState<CredentialHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
 
   // Verifica se está autenticado como admin
@@ -166,6 +188,20 @@ export function AdminDashboard() {
 
       if (error) throw error;
       setUsers((data as unknown as User[]) || []);
+
+      // Load tags config
+      try {
+        const { data: tagData } = await supabase.rpc('get_tags_config_secure', {
+          p_admin_secret: password
+        });
+        if (tagData) {
+          setTagNames(tagData as typeof tagNames);
+          setEditingTagNames(tagData as typeof tagNames);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar tags:', err);
+      }
+
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar usuários');
       if (err.message && err.message.includes('Acesso negado')) {
@@ -367,6 +403,104 @@ export function AdminDashboard() {
     }
   };
 
+  const toggleBetfairAlert = async (user: User) => {
+    setAlertingBetfairUser(user.id);
+    try {
+      const newAlertStatus = !user.betfair_warning_alert;
+      const password = getAdminPassword();
+      
+      const { error } = await supabase.rpc('toggle_betfair_warning_alert_secure', {
+        p_admin_secret: password,
+        p_user_id: user.id,
+        p_alert_status: newAlertStatus
+      });
+
+      if (error) throw error;
+      await loadUsers();
+    } catch (err: any) {
+      alert('Erro ao atualizar alerta Betfair: ' + err.message);
+    } finally {
+      setAlertingBetfairUser(null);
+    }
+  };
+
+  const toggleBancaAlert = async (user: User) => {
+    setAlertingBancaUser(user.id);
+    try {
+      const newAlertStatus = !user.banca_warning_alert;
+      const password = getAdminPassword();
+      
+      const { error } = await supabase.rpc('toggle_banca_warning_alert_secure', {
+        p_admin_secret: password,
+        p_user_id: user.id,
+        p_alert_status: newAlertStatus
+      });
+
+      if (error) throw error;
+      await loadUsers();
+    } catch (err: any) {
+      alert('Erro ao atualizar alerta de Banca: ' + err.message);
+    } finally {
+      setAlertingBancaUser(null);
+    }
+  };
+
+  const setUserTag = async (user: User, tagColor: string | null) => {
+    setTaggingUser(user.id);
+    try {
+      const password = getAdminPassword();
+      const { error } = await supabase.rpc('set_user_tag_color_secure', {
+        p_admin_secret: password,
+        p_user_id: user.id,
+        p_tag_color: tagColor
+      });
+
+      if (error) throw error;
+      await loadUsers();
+    } catch (err: any) {
+      alert('Erro ao atualizar tag: ' + err.message);
+    } finally {
+      setTaggingUser(null);
+    }
+  };
+
+  const saveTagConfig = async () => {
+    setSavingTags(true);
+    try {
+      const password = getAdminPassword();
+      const { error } = await supabase.rpc('update_tags_config_secure', {
+        p_admin_secret: password,
+        p_tag_config: editingTagNames
+      });
+      if (error) throw error;
+      setTagNames(editingTagNames);
+      setShowTagConfigModal(false);
+    } catch (err: any) {
+      alert('Erro ao salvar tags: ' + err.message);
+    } finally {
+      setSavingTags(false);
+    }
+  };
+
+  const loadCredentialHistory = async (userId: string) => {
+    setShowHistoryModal(userId);
+    setLoadingHistory(true);
+    setCredentialHistory([]);
+    try {
+      const password = getAdminPassword();
+      const { data, error } = await supabase.rpc('get_user_credentials_history_secure', {
+        p_admin_secret: password,
+        p_user_id: userId
+      });
+      if (error) throw error;
+      setCredentialHistory((data as unknown as CredentialHistory[]) || []);
+    } catch (err: any) {
+      alert('Erro ao carregar histórico: ' + err.message);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   // Estatísticas
   const stats = {
     total: users.length,
@@ -386,14 +520,14 @@ export function AdminDashboard() {
       )}
       */}
       
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen p-2 md:p-4">
       {/* Background decorativo admin */}
       <div className="fixed inset-0 opacity-40 pointer-events-none" 
            style={{
              background: 'radial-gradient(at 40% 20%, rgba(239, 68, 68, 0.2) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(220, 38, 38, 0.15) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(185, 28, 28, 0.15) 0px, transparent 50%)'
            }} />
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="w-full max-w-[98%] mx-auto relative z-10">
         {/* Header */}
         <div className="glass-card p-6 mb-8 border-red-900/30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -416,6 +550,13 @@ export function AdminDashboard() {
               >
                 <RefreshIcon />
                 <span className="hidden md:inline">Atualizar</span>
+              </button>
+              <button
+                onClick={() => { setEditingTagNames(tagNames); setShowTagConfigModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800/50 border border-gray-700 text-gray-400 hover:text-white hover:border-blue-500/50 transition-all duration-200"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                <span className="hidden md:inline">Configurar Tags</span>
               </button>
               <button
                 onClick={handleLogout}
@@ -577,38 +718,43 @@ export function AdminDashboard() {
               <table className="w-full">
                 <thead className="bg-gray-800/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Usuário</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Localização / IP</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Telefone</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Exchange</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Conta</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Senha</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">2 Fatores</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Banca</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Stake</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Cadastro</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ações</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Usuário</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">IP/Local</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Telefone</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Exchange</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Conta</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Senha</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">2 Fatores</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Banca/Stake</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ações & Avisos</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {currentUsers.map((user) => (
-                    <tr key={user.id} className={`hover:bg-gray-800/30 transition-colors ${user.account_alert ? 'bg-yellow-900/10 border-l-4 border-yellow-500' : ''}`}>
-                      <td className="px-6 py-4">
+                  {currentUsers.map((user) => {
+                    const rowBgClass = user.tag_color === 'red' ? 'bg-red-900/20 border-l-4 border-red-500' :
+                                       user.tag_color === 'blue' ? 'bg-blue-900/20 border-l-4 border-blue-500' :
+                                       user.tag_color === 'green' ? 'bg-green-900/20 border-l-4 border-green-500' :
+                                       user.tag_color === 'purple' ? 'bg-purple-900/20 border-l-4 border-purple-500' :
+                                       user.account_alert ? 'bg-yellow-900/10 border-l-4 border-yellow-500' : '';
+                    return (
+                    <tr key={user.id} className={`hover:bg-gray-800/50 transition-colors ${rowBgClass}`}>
+                      <td className="px-4 py-4">
                         <div>
                           <div className="font-medium text-white">{user.full_name}</div>
-                          <div className="text-sm text-gray-400">{user.email}</div>
+                          <div className="text-xs text-gray-400">{user.email}</div>
+                          <div className="text-[10px] text-gray-500 mt-1">{formatDate(user.created_at)}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div>
                            <div className="text-sm text-gray-300">{user.location || '-'}</div>
                            {user.ip_address && (
-                             <div className="text-xs text-gray-500 font-mono mt-1">{user.ip_address}</div>
+                             <div className="text-[10px] text-gray-500 font-mono mt-1">{user.ip_address}</div>
                            )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-300">
                             {user.phone || <span className="text-gray-500">Não informado</span>}
@@ -628,7 +774,7 @@ export function AdminDashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                             user.exchange_type === 'betfair' ? 'bg-green-500/20 text-green-400' :
@@ -641,7 +787,7 @@ export function AdminDashboard() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-300">
                             {user.betfair_account || <span className="text-gray-500">Não configurado</span>}
@@ -661,7 +807,7 @@ export function AdminDashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           {user.betfair_password ? (
                             <>
@@ -692,7 +838,7 @@ export function AdminDashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                            <span className="text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded border border-gray-700">
                              {user.two_factor_code ? user.two_factor_code : <span className="text-gray-500 text-xs">Não inf.</span>}
@@ -712,17 +858,13 @@ export function AdminDashboard() {
                            )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-300">
-                          {user.banca ? `R$ ${Number(user.banca).toFixed(2)}` : <span className="text-gray-500">-</span>}
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col gap-1 text-sm font-medium text-gray-300">
+                          <div><span className="text-xs text-gray-500">B:</span> {user.banca ? `R$ ${Number(user.banca).toFixed(2)}` : '-'}</div>
+                          <div><span className="text-xs text-gray-500">S:</span> R$ {Number(user.stake).toFixed(2)}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-300">
-                          R$ {Number(user.stake).toFixed(2)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           {user.system_enabled ? (
                             <>
@@ -737,63 +879,102 @@ export function AdminDashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-400">
-                          {formatDate(user.created_at)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {user.betfair_account && user.betfair_password ? (
-                            <>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* TAGS SELECTOR */}
+                            <select
+                              value={user.tag_color || ''}
+                              onChange={(e) => setUserTag(user, e.target.value || null)}
+                              disabled={taggingUser === user.id}
+                              className="text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 outline-none focus:border-gray-500"
+                            >
+                              <option value="">Sem Tag</option>
+                              <option value="red">{tagNames.red}</option>
+                              <option value="green">{tagNames.green}</option>
+                              <option value="blue">{tagNames.blue}</option>
+                              <option value="purple">{tagNames.purple}</option>
+                            </select>
+
+                          <button
+                            onClick={() => loadCredentialHistory(user.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded bg-gray-700/50 text-gray-400 hover:bg-gray-700 transition-colors"
+                            title="Ver Histórico de Contas Betfair"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span className="text-[10px] font-bold uppercase">Histórico</span>
+                          </button>
+
+                          {user.betfair_account && user.betfair_password && (
                               <button
                                 onClick={() => redirectToExchange(user)}
-                                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors"
                                 title={`Abrir ${user.exchange_type || 'Betfair'} com login automático`}
                               >
                                 <ExternalLinkIcon />
-                                <span className="text-xs font-medium hidden md:inline">{user.exchange_type || 'Betfair'}</span>
+                                <span className="text-[10px] font-bold uppercase">{user.exchange_type || 'Betfair'}</span>
                               </button>
+                          )}
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-1.5">
                               <button
                                 onClick={() => toggleAlert(user)}
                                 disabled={alertingUser === user.id}
-                                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 shadow-lg ${
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
                                   user.account_alert 
-                                    ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white hover:from-yellow-700 hover:to-yellow-800 hover:shadow-yellow-500/25' 
-                                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                title={user.account_alert ? 'Remover alerta de credenciais incorretas' : 'Marcar credenciais como incorretas'}
+                                    ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50' 
+                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                }`}
+                                title="Alerta de Credenciais Incorretas"
                               >
-                                <AlertIcon />
-                                <span className="text-xs font-medium hidden md:inline">
-                                  {alertingUser === user.id ? '...' : user.account_alert ? 'Alerta ON' : 'Alerta'}
-                                </span>
+                                {alertingUser === user.id ? '...' : user.account_alert ? 'Alert ON' : 'Alert'}
                               </button>
+                              
                               <button
                                 onClick={() => toggle2FAAlert(user)}
                                 disabled={alerting2FAUser === user.id}
-                                className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 shadow-lg ${
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
                                   user.two_factor_alert 
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-blue-500/25' 
-                                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                title={user.two_factor_alert ? 'Remover alerta de 2FA' : 'Marcar para pedir 2FA'}
+                                    ? 'bg-blue-500/20 text-blue-500 border border-blue-500/50' 
+                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                }`}
+                                title="Alerta de 2FA"
                               >
-                                <KeyIconAdmin />
-                                <span className="text-xs font-medium hidden md:inline">
-                                  {alerting2FAUser === user.id ? '...' : user.two_factor_alert ? '2FA ON' : '2FA'}
-                                </span>
+                                {alerting2FAUser === user.id ? '...' : user.two_factor_alert ? '2FA ON' : '2FA'}
                               </button>
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-500 px-3 py-2">
-                              Sem credenciais
-                            </span>
-                          )}
+
+                              <button
+                                onClick={() => toggleBetfairAlert(user)}
+                                disabled={alertingBetfairUser === user.id}
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
+                                  user.betfair_warning_alert 
+                                    ? 'bg-red-500/20 text-red-500 border border-red-500/50' 
+                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                }`}
+                                title="Aviso para Configurar Betfair"
+                              >
+                                {alertingBetfairUser === user.id ? '...' : user.betfair_warning_alert ? 'Sem Conta ON' : 'Sem Conta'}
+                              </button>
+
+                              <button
+                                onClick={() => toggleBancaAlert(user)}
+                                disabled={alertingBancaUser === user.id}
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
+                                  user.banca_warning_alert 
+                                    ? 'bg-orange-500/20 text-orange-500 border border-orange-500/50' 
+                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                }`}
+                                title="Aviso de Banca Insuficiente"
+                              >
+                                {alertingBancaUser === user.id ? '...' : user.banca_warning_alert ? 'Banca < 500 ON' : 'Banca < 500'}
+                              </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>
@@ -885,6 +1066,88 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
+        {/* Modais do Admin */}
+        
+        {/* Modal de Configuração de Tags */}
+        {showTagConfigModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-card w-full max-w-md p-6 border-gray-700/50 shadow-2xl animate-scale-in">
+              <h2 className="text-xl font-bold text-white mb-4">Renomear Tags</h2>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Tag Vermelha</label>
+                  <input type="text" value={editingTagNames.red} onChange={e => setEditingTagNames({...editingTagNames, red: e.target.value})} className="input-modern" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Tag Verde</label>
+                  <input type="text" value={editingTagNames.green} onChange={e => setEditingTagNames({...editingTagNames, green: e.target.value})} className="input-modern" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Tag Azul</label>
+                  <input type="text" value={editingTagNames.blue} onChange={e => setEditingTagNames({...editingTagNames, blue: e.target.value})} className="input-modern" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Tag Roxa</label>
+                  <input type="text" value={editingTagNames.purple} onChange={e => setEditingTagNames({...editingTagNames, purple: e.target.value})} className="input-modern" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowTagConfigModal(false)} className="px-4 py-2 rounded-xl border border-gray-700 text-gray-400 hover:text-white transition-colors">Cancelar</button>
+                <button onClick={saveTagConfig} disabled={savingTags} className="px-4 py-2 rounded-xl bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors">
+                  {savingTags ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Histórico de Credenciais */}
+        {showHistoryModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-card w-full max-w-3xl p-6 border-gray-700/50 shadow-2xl animate-scale-in flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Histórico de Contas Betfair
+                </h2>
+                <button onClick={() => setShowHistoryModal(null)} className="text-gray-400 hover:text-white">
+                  <XCircleIcon />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2">
+                {loadingHistory ? (
+                  <div className="text-center py-10 text-gray-400">Carregando histórico...</div>
+                ) : credentialHistory.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400 bg-gray-800/30 rounded-xl">Nenhum histórico encontrado para este usuário.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {credentialHistory.map((item, index) => (
+                      <div key={item.id} className="p-4 bg-gray-800/50 border border-gray-700/50 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Conta:</span>
+                            <span className="text-sm font-medium text-white">{item.betfair_account || <span className="text-gray-500 italic">Vazio</span>}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Senha:</span>
+                            <span className="text-sm font-mono text-gray-300">{item.betfair_password || <span className="text-gray-500 italic">Vazio</span>}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-400">Alterado em:</div>
+                          <div className="text-sm text-blue-400 font-medium">{formatDate(item.changed_at)}</div>
+                          {index === 0 && <span className="inline-block mt-1 text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Atual</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
     </>
