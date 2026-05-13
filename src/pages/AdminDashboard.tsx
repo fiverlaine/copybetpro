@@ -264,8 +264,11 @@ export function AdminDashboard() {
     }
 
     setFilteredUsers(filtered);
-    setCurrentPage(1); // Reset para primeira página quando aplicar filtros
   }, [users, searchTerm, statusFilter, betfairFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset para primeira página apenas quando alterar os filtros, não quando recarregar usuários
+  }, [searchTerm, statusFilter, betfairFilter]);
 
   // Calcular paginação
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
