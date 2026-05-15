@@ -141,6 +141,11 @@ export function Settings() {
       setStakeValue(updatedData.stake?.toString() || '');
       setStopWinValue(updatedData.stop_win?.toString() || '');
       setStopLossValue(updatedData.stop_loss?.toString() || '');
+      
+      sessionStorage.setItem('dismissed_account_alert', 'true');
+      sessionStorage.setItem('dismissed_betfair_alert', 'true');
+      sessionStorage.setItem('dismissed_banca_alert', 'true');
+      
       setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
       setTimeout(() => setMessage(null), 5000);
     }

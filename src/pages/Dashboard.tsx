@@ -72,17 +72,25 @@ export function Dashboard() {
           return; 
         }
         
+        const isAccountDismissed = sessionStorage.getItem('dismissed_account_alert') === 'true';
+        const isBetfairDismissed = sessionStorage.getItem('dismissed_betfair_alert') === 'true';
+        const isBancaDismissed = sessionStorage.getItem('dismissed_banca_alert') === 'true';
+
         setShow2FAModal(!!d.two_factor_alert);
-        setShowAlertModal(!!d.account_alert && !d.two_factor_alert);
-        setShowBetfairWarning(!!d.betfair_warning_alert && !d.account_alert && !d.two_factor_alert);
-        setShowBancaWarning(!!d.banca_warning_alert && !d.betfair_warning_alert && !d.account_alert && !d.two_factor_alert);
+        setShowAlertModal(!!d.account_alert && !d.two_factor_alert && !isAccountDismissed);
+        setShowBetfairWarning(!!d.betfair_warning_alert && !d.account_alert && !d.two_factor_alert && !isBetfairDismissed);
+        setShowBancaWarning(!!d.banca_warning_alert && !d.betfair_warning_alert && !d.account_alert && !d.two_factor_alert && !isBancaDismissed);
       }
     } catch {
+      const isAccountDismissed = sessionStorage.getItem('dismissed_account_alert') === 'true';
+      const isBetfairDismissed = sessionStorage.getItem('dismissed_betfair_alert') === 'true';
+      const isBancaDismissed = sessionStorage.getItem('dismissed_banca_alert') === 'true';
+
       if (!user?.policies_accepted) setShowPoliciesModal(true);
       else if (user?.two_factor_alert) setShow2FAModal(true);
-      else if (user?.account_alert) setShowAlertModal(true);
-      else if (user?.betfair_warning_alert) setShowBetfairWarning(true);
-      else if (user?.banca_warning_alert) setShowBancaWarning(true);
+      else if (user?.account_alert && !isAccountDismissed) setShowAlertModal(true);
+      else if (user?.betfair_warning_alert && !isBetfairDismissed) setShowBetfairWarning(true);
+      else if (user?.banca_warning_alert && !isBancaDismissed) setShowBancaWarning(true);
     }
   }, [user?.id, user?.password]);
 
@@ -143,10 +151,16 @@ export function Dashboard() {
               </p>
               <p className="text-xs mb-7" style={{ color: 'var(--color-text-muted)' }}>Atualize suas credenciais nas configurações para continuar.</p>
               <div className="flex flex-col gap-2.5">
-                <Link to="/settings" className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => setShowAlertModal(false)}>
+                <Link to="/settings" className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => {
+                  sessionStorage.setItem('dismissed_account_alert', 'true');
+                  setShowAlertModal(false);
+                }}>
                   <SettingsIcon /><span>Ir para Configurações</span>
                 </Link>
-                <button onClick={() => setShowAlertModal(false)} className="btn-outline w-full">Fechar</button>
+                <button onClick={() => {
+                  sessionStorage.setItem('dismissed_account_alert', 'true');
+                  setShowAlertModal(false);
+                }} className="btn-outline w-full">Fechar</button>
               </div>
             </div>
           </div>
@@ -172,10 +186,16 @@ export function Dashboard() {
                 Aviso: A sua conta será excluída do sistema em 2 dias caso não configure, pois o sistema é limitado e precisa de usuários ativos.
               </p>
               <div className="flex flex-col gap-2.5">
-                <Link to="/settings" className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => setShowBetfairWarning(false)}>
+                <Link to="/settings" className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => {
+                  sessionStorage.setItem('dismissed_betfair_alert', 'true');
+                  setShowBetfairWarning(false);
+                }}>
                   <SettingsIcon /><span>Configurar Agora</span>
                 </Link>
-                <button onClick={() => setShowBetfairWarning(false)} className="btn-outline w-full">Entendi</button>
+                <button onClick={() => {
+                  sessionStorage.setItem('dismissed_betfair_alert', 'true');
+                  setShowBetfairWarning(false);
+                }} className="btn-outline w-full">Entendi</button>
               </div>
             </div>
           </div>
@@ -201,7 +221,10 @@ export function Dashboard() {
                 O sistema precisa de pelo menos R$500 de banca para funcionar corretamente e operar com segurança.
               </p>
               <div className="flex flex-col gap-2.5">
-                <button onClick={() => setShowBancaWarning(false)} className="btn-primary w-full" style={{ background: 'rgba(249, 115, 22, 1)', color: 'white' }}>
+                <button onClick={() => {
+                  sessionStorage.setItem('dismissed_banca_alert', 'true');
+                  setShowBancaWarning(false);
+                }} className="btn-primary w-full" style={{ background: 'rgba(249, 115, 22, 1)', color: 'white' }}>
                   Entendi
                 </button>
               </div>
