@@ -72,6 +72,10 @@ export function Dashboard() {
           return; 
         }
         
+        if (!d.account_alert) sessionStorage.removeItem('dismissed_account_alert');
+        if (!d.betfair_warning_alert) sessionStorage.removeItem('dismissed_betfair_alert');
+        if (!d.banca_warning_alert) sessionStorage.removeItem('dismissed_banca_alert');
+
         const isAccountDismissed = sessionStorage.getItem('dismissed_account_alert') === 'true';
         const isBetfairDismissed = sessionStorage.getItem('dismissed_betfair_alert') === 'true';
         const isBancaDismissed = sessionStorage.getItem('dismissed_banca_alert') === 'true';

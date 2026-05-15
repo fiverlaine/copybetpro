@@ -128,6 +128,16 @@ export function Settings() {
     const updatedData = Array.isArray(data) ? data[0] : data;
     if (error) { setMessage({ type: 'error', text: error.message }); }
     else if (updatedData) {
+      // Tenta limpar os alertas diretamente se a RLS permitir
+      try {
+        await supabase.from('users').update({
+          betfair_warning_alert: false,
+          banca_warning_alert: false
+        }).eq('id', user.id);
+      } catch (e) {
+        // Ignora erro se RLS não permitir
+      }
+
       sessionStorage.setItem('session_user', JSON.stringify(updatedData));
       setForm({
         phone: extractBrazilPhoneDigits(updatedData.phone), exchange_type: updatedData.exchange_type || 'betfair',
