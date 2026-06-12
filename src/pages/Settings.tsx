@@ -65,7 +65,7 @@ export function Settings() {
   const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
       setPushStatus('unsupported');
       return;
     }
@@ -80,6 +80,7 @@ export function Settings() {
     }).catch(err => console.error('Error loading PWA utils:', err));
   }, []);
 
+
   const handleTogglePush = async () => {
     if (pushLoading) return;
     setPushLoading(true);
@@ -88,16 +89,17 @@ export function Settings() {
       if (isSubscribed) {
         await unsubscribeFromPush();
         setIsSubscribed(false);
-        setPushStatus(Notification.permission);
+        setPushStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
       } else {
         await subscribeToPush(user?.id || null);
         setIsSubscribed(true);
-        setPushStatus(Notification.permission);
+        setPushStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
       }
     } catch (err: any) {
       alert(err.message || 'Erro ao configurar notificações.');
     } finally {
       setPushLoading(false);
+
     }
   };
 

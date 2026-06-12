@@ -42,7 +42,8 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
 
     // If standalone and permission is default (and not dismissed), show push notification prompt
     const pushDismissed = localStorage.getItem('pwa_push_dismissed') === 'true';
-    if (Notification.permission === 'default' && !pushDismissed) {
+    const hasNotification = typeof Notification !== 'undefined';
+    if (hasNotification && Notification.permission === 'default' && !pushDismissed) {
       // Show push prompt shortly after load
       const timer = setTimeout(() => {
         // If install guide is showing, wait; otherwise show it
@@ -53,6 +54,7 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
       return () => clearTimeout(timer);
     }
   }, [showInstallPrompt]);
+
 
   // Listen for Android install prompt
   useEffect(() => {
@@ -75,10 +77,12 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
     setShowInstallPrompt(false);
     
     // Check if we should trigger the notification popup after install guide is closed
-    if (Notification.permission === 'default' && localStorage.getItem('pwa_push_dismissed') !== 'true') {
+    const hasNotification = typeof Notification !== 'undefined';
+    if (hasNotification && Notification.permission === 'default' && localStorage.getItem('pwa_push_dismissed') !== 'true') {
       setShowPushPrompt(true);
     }
   };
+
 
   // Dismiss Push request popup
   const handleDismissPush = () => {
