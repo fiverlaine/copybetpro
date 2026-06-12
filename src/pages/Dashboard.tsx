@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { PoliciesModal } from '../components/PoliciesModal';
 import { setSessionUser } from '../lib/session';
+import { PWAPrompt } from '../components/PWAPrompt';
 
 interface PlatformStats {
   total_profit: number;
@@ -180,6 +181,7 @@ export function Dashboard() {
   return (
     <>
       <PoliciesModal isOpen={showPoliciesModal} onAccept={handleAcceptPolicies} onClose={undefined} canClose={false} loading={policiesLoading} />
+      <PWAPrompt userId={user?.id || null} onSubscribed={() => { setIsSubscribed(true); setPushStatus('granted'); }} />
 
       {/* Alert Modal */}
       {showAlertModal && !showPoliciesModal && (
@@ -340,7 +342,7 @@ export function Dashboard() {
         </div>
 
         {/* PWA Push Notification Activation Card */}
-        {pushStatus !== 'unsupported' && pushStatus !== 'denied' && !isSubscribed && (
+        {pushStatus !== 'unsupported' && pushStatus !== 'denied' && !isSubscribed && localStorage.getItem('pwa_push_dismissed') === 'true' && (
           <div className="surface-card p-6 border-amber-500/30 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden animate-slide-up">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-start gap-4">
