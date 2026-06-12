@@ -30,10 +30,11 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
                                (window.navigator as any).standalone === true;
         const checkPush = typeof Notification !== 'undefined' && Notification.permission === 'granted';
         
-        await supabase.from('users').update({
-          pwa_installed: checkStandalone,
-          push_notifications_enabled: checkPush
-        }).eq('id', userId);
+        await supabase.rpc('update_user_pwa_status_secure', {
+          p_user_id: userId,
+          p_pwa_installed: checkStandalone,
+          p_push_enabled: checkPush
+        });
       } catch (err) {
         console.error('Erro ao sincronizar status PWA/Notificações:', err);
       }
@@ -151,9 +152,13 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
       
       // Update database status immediately
       if (userId) {
-        await supabase.from('users').update({
-          push_notifications_enabled: true
-        }).eq('id', userId);
+        const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                               (window.navigator as any).standalone === true;
+        await supabase.rpc('update_user_pwa_status_secure', {
+          p_user_id: userId,
+          p_pwa_installed: checkStandalone,
+          p_push_enabled: true
+        });
       }
     } catch (err: any) {
       console.error(err);

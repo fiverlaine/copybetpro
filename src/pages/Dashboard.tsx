@@ -76,14 +76,26 @@ export function Dashboard() {
         setIsSubscribed(false);
         setPushStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
         if (user?.id) {
-          await supabase.from('users').update({ push_notifications_enabled: false }).eq('id', user.id);
+          const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                 (window.navigator as any).standalone === true;
+          await supabase.rpc('update_user_pwa_status_secure', {
+            p_user_id: user.id,
+            p_pwa_installed: checkStandalone,
+            p_push_enabled: false
+          });
         }
       } else {
         await subscribeToPush(user?.id || null);
         setIsSubscribed(true);
         setPushStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
         if (user?.id) {
-          await supabase.from('users').update({ push_notifications_enabled: true }).eq('id', user.id);
+          const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                 (window.navigator as any).standalone === true;
+          await supabase.rpc('update_user_pwa_status_secure', {
+            p_user_id: user.id,
+            p_pwa_installed: checkStandalone,
+            p_push_enabled: true
+          });
         }
       }
     } catch (err: any) {
