@@ -92,3 +92,11 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Listen to message event to trigger skipWaiting
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+

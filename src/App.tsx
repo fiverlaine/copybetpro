@@ -10,6 +10,7 @@ import { Strategies } from './pages/Strategies';
 import { Surebet } from './pages/Surebet';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 
 // ── SVG ICONS (redesigned) ──
 
@@ -328,6 +329,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <PWAUpdatePrompt />
       <Routes>
         {/* Admin routes */}
         <Route path="/a1c909fe301e7082" element={
