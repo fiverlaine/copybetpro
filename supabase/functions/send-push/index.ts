@@ -61,7 +61,44 @@ Deno.serve(async (req) => {
       filteredSubs = filteredSubs.filter((sub: any) => sub.users?.tag_color === targetTagColor);
     }
 
+    // Get target description for history logging
+    let targetStr = 'Todos os Usuários';
+    if (targetUserId) {
+      const { data: userData } = await supabaseClient
+        .from('users')
+        .select('full_name, email')
+        .eq('id', targetUserId)
+        .single();
+      if (userData) {
+        targetStr = `Usuário: ${userData.full_name} (${userData.email})`;
+      } else {
+        targetStr = `Usuário ID: ${targetUserId}`;
+      }
+    } else if (targetTagColor) {
+      const colorsMap: Record<string, string> = {
+        red: 'Vermelho',
+        green: 'Verde',
+        blue: 'Azul',
+        purple: 'Roxo'
+      };
+      targetStr = `Tag: ${colorsMap[targetTagColor] || targetTagColor}`;
+    }
+
     if (filteredSubs.length === 0) {
+      // Log failed attempt with 0 success/failure to history as well (useful for debugging)
+      try {
+        await supabaseClient.from('push_notification_history').insert({
+          title,
+          body,
+          url: url || '/dashboard',
+          target: targetStr,
+          success_count: 0,
+          failure_count: 0,
+        });
+      } catch (logError) {
+        console.error('Erro ao salvar histórico de disparo sem inscritos:', logError);
+      }
+
       return new Response(
         JSON.stringify({ message: 'Nenhuma inscrição de notificações encontrada para os filtros especificados.', results: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -99,6 +136,21 @@ Deno.serve(async (req) => {
 
     const results = await Promise.all(sendPromises);
     const successfulCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    // Log to push_notification_history
+    try {
+      await supabaseClient.from('push_notification_history').insert({
+        title,
+        body,
+        url: url || '/dashboard',
+        target: targetStr,
+        success_count: successfulCount,
+        failure_count: failureCount,
+      });
+    } catch (logError) {
+      console.error('Erro ao salvar histórico de disparo:', logError);
+    }
 
     return new Response(
       JSON.stringify({ message: `Sucesso: ${successfulCount} de ${results.length} notificações enviadas.`, results }),

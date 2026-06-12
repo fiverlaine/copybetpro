@@ -111,7 +111,43 @@ const ExternalLinkIcon = () => (
   </svg>
 );
 
+interface PushHistory {
+  id: string;
+  title: string;
+  body: string;
+  url: string;
+  target: string;
+  success_count: number;
+  failure_count: number;
+  created_at: string;
+}
 
+const NOTIFICATION_TEMPLATES = {
+  credenciais: {
+    title: '⚠️ Credenciais Incorretas Betfair',
+    body: 'Suas credenciais da Betfair parecem estar incorretas. Por favor, atualize-as nas configurações para que o robô possa operar.',
+    url: '/settings',
+    label: 'Credenciais Betfair Incorretas'
+  },
+  two_factor: {
+    title: '🔑 Código 2FA Necessário',
+    body: 'O robô precisa do seu código 2FA da Betfair para fazer o login e continuar as operações. Insira o código no seu painel.',
+    url: '/dashboard',
+    label: 'Código 2FA Necessário'
+  },
+  betfair_warning: {
+    title: '⚙️ Configuração Pendente Betfair',
+    body: 'Você ainda não configurou sua conta da Betfair. Conecte sua conta para começar a copiar as estratégias automaticamente.',
+    url: '/settings',
+    label: 'Configuração Betfair Pendente'
+  },
+  banca_warning: {
+    title: '💰 Saldo de Banca Insuficiente',
+    body: 'Identificamos que seu saldo de banca na Betfair está abaixo de R$ 500. Aumente seu saldo para que o robô possa realizar as operações.',
+    url: '/dashboard',
+    label: 'Banca Insuficiente (< R$ 500)'
+  }
+};
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -141,6 +177,12 @@ export function AdminDashboard() {
   const [credentialHistory, setCredentialHistory] = useState<CredentialHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+
+  // Push Notification History states
+  const [pushHistory, setPushHistory] = useState<PushHistory[]>([]);
+  const [loadingHistoryData, setLoadingHistoryData] = useState(false);
+  const [showHistorySection, setShowHistorySection] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
   // Push Notification form states
   const [pushTitle, setPushTitle] = useState('');
@@ -189,6 +231,10 @@ export function AdminDashboard() {
       setPushTitle('');
       setPushBody('');
       setPushUrl('/dashboard');
+      setSelectedTemplate('');
+      
+      // Reload history on success
+      await loadPushHistory();
       
     } catch (err: any) {
       console.error('Erro ao enviar push:', err);
@@ -261,8 +307,45 @@ export function AdminDashboard() {
     }
   };
 
+  const loadPushHistory = async () => {
+    setLoadingHistoryData(true);
+    try {
+      const password = getAdminPassword();
+      const { data, error } = await supabase.rpc('get_notification_history_secure', {
+        p_admin_secret: password
+      });
+
+      if (error) throw error;
+      setPushHistory((data as unknown as PushHistory[]) || []);
+    } catch (err: any) {
+      console.error('Erro ao carregar histórico de disparos:', err);
+    } finally {
+      setLoadingHistoryData(false);
+    }
+  };
+
+  const triggerTemplateForUser = (user: User, templateKey: keyof typeof NOTIFICATION_TEMPLATES) => {
+    setShowPushForm(true);
+    setPushTarget('user');
+    setPushTargetUser(user.id);
+    setSelectedTemplate(templateKey);
+    
+    const t = NOTIFICATION_TEMPLATES[templateKey];
+    setPushTitle(t.title);
+    setPushBody(t.body);
+    setPushUrl(t.url);
+    
+    setTimeout(() => {
+      const formEl = document.getElementById('push-notification-form');
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
+
   useEffect(() => {
     loadUsers();
+    loadPushHistory();
 
     // NOTE: Realtime subscription removido pois RLS bloqueia acesso anônimo
     // Para reativar, seria necessário implementar autenticação real via Supabase Auth
@@ -693,7 +776,7 @@ export function AdminDashboard() {
           </button>
 
           {showPushForm && (
-            <div className="p-6 border-t border-gray-700/50 bg-gray-800/10">
+            <div id="push-notification-form" className="p-6 border-t border-gray-700/50 bg-gray-800/10">
               {pushResultMsg && (
                 <div className={`p-4 mb-5 rounded-lg text-sm border flex items-start gap-3 ${
                   pushResultMsg.type === 'success'
@@ -712,7 +795,36 @@ export function AdminDashboard() {
               )}
 
               <form onSubmit={handleSendPush} className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Template Rápido</label>
+                    <select
+                      value={selectedTemplate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedTemplate(val);
+                        if (val && val in NOTIFICATION_TEMPLATES) {
+                          const t = NOTIFICATION_TEMPLATES[val as keyof typeof NOTIFICATION_TEMPLATES];
+                          setPushTitle(t.title);
+                          setPushBody(t.body);
+                          setPushUrl(t.url);
+                        } else {
+                          setPushTitle('');
+                          setPushBody('');
+                          setPushUrl('/dashboard');
+                        }
+                      }}
+                      className="input-modern focus:border-red-500 focus:ring-red-500 text-amber-400 font-semibold"
+                    >
+                      <option value="">-- Personalizado (Nenhum) --</option>
+                      {Object.entries(NOTIFICATION_TEMPLATES).map(([key, t]) => (
+                        <option key={key} value={key}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">Título da Notificação</label>
                     <input
@@ -822,6 +934,105 @@ export function AdminDashboard() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+        </div>
+
+        {/* Histórico de Disparos Section */}
+        <div className="glass-card border-red-900/30 mb-8 overflow-hidden">
+          <button
+            onClick={() => {
+              setShowHistorySection(!showHistorySection);
+              if (!showHistorySection) {
+                loadPushHistory();
+              }
+            }}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/20 transition-all duration-200 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Histórico de Disparos</h3>
+                <p className="text-sm text-gray-400">Visualize todas as notificações push enviadas e as taxas de entrega</p>
+              </div>
+            </div>
+            <div className="text-gray-400">
+              {showHistorySection ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </div>
+          </button>
+
+          {showHistorySection && (
+            <div className="p-6 border-t border-gray-700/50 bg-gray-800/10">
+              {loadingHistoryData ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : pushHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">
+                  Nenhum disparo de notificação registrado no histórico.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-700/50 text-[11px] uppercase tracking-wider text-gray-400 font-bold">
+                        <th className="pb-3 pr-4 text-left">Data/Hora</th>
+                        <th className="pb-3 pr-4 text-left">Destinatário</th>
+                        <th className="pb-3 pr-4 text-left">Título / Mensagem</th>
+                        <th className="pb-3 pr-4 text-left">Redirecionamento</th>
+                        <th className="pb-3 text-right">Sucesso / Falha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700/30 text-sm">
+                      {pushHistory.map((item) => {
+                        const total = item.success_count + item.failure_count;
+                        const successRate = total > 0 ? Math.round((item.success_count / total) * 100) : 0;
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-800/10 transition-colors">
+                            <td className="py-3 pr-4 whitespace-nowrap text-xs text-gray-400">
+                              {new Date(item.created_at).toLocaleString('pt-BR')}
+                            </td>
+                            <td className="py-3 pr-4 font-semibold text-white whitespace-nowrap">
+                              {item.target}
+                            </td>
+                            <td className="py-3 pr-4 max-w-xs md:max-w-md">
+                              <div className="font-semibold text-amber-400 truncate">{item.title}</div>
+                              <div className="text-gray-400 text-xs truncate mt-0.5" title={item.body}>{item.body}</div>
+                            </td>
+                            <td className="py-3 pr-4 text-xs text-blue-400 whitespace-nowrap">
+                              <code>{item.url}</code>
+                            </td>
+                            <td className="py-3 text-right whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                item.success_count > 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                              }`}>
+                                {item.success_count} / {item.failure_count}
+                              </span>
+                              {total > 0 && (
+                                <div className="text-[10px] text-gray-500 mt-1">
+                                  {successRate}% de entrega
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1133,58 +1344,106 @@ export function AdminDashboard() {
                           )}
                           </div>
                           
-                          <div className="flex flex-wrap items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Alerta de Credenciais */}
+                            <div className="flex items-center gap-0.5 bg-gray-900/40 p-0.5 rounded-lg border border-gray-700/30">
                               <button
                                 onClick={() => toggleAlert(user)}
                                 disabled={alertingUser === user.id}
-                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
+                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
                                   user.account_alert 
-                                    ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50' 
-                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-yellow-500/20 text-yellow-500' 
+                                    : 'text-gray-400 hover:bg-gray-700/50'
                                 }`}
                                 title="Alerta de Credenciais Incorretas"
                               >
                                 {alertingUser === user.id ? '...' : user.account_alert ? 'Alert ON' : 'Alert'}
                               </button>
-                              
+                              <button
+                                onClick={() => triggerTemplateForUser(user, 'credenciais')}
+                                className="p-1 text-gray-400 hover:text-yellow-400 hover:bg-gray-800 rounded transition-colors"
+                                title="Disparar Notificação de Credenciais Incorretas"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            {/* Alerta de 2FA */}
+                            <div className="flex items-center gap-0.5 bg-gray-900/40 p-0.5 rounded-lg border border-gray-700/30">
                               <button
                                 onClick={() => toggle2FAAlert(user)}
                                 disabled={alerting2FAUser === user.id}
-                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
+                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
                                   user.two_factor_alert 
-                                    ? 'bg-blue-500/20 text-blue-500 border border-blue-500/50' 
-                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-blue-500/20 text-blue-500' 
+                                    : 'text-gray-400 hover:bg-gray-700/50'
                                 }`}
                                 title="Alerta de 2FA"
                               >
                                 {alerting2FAUser === user.id ? '...' : user.two_factor_alert ? '2FA ON' : '2FA'}
                               </button>
+                              <button
+                                onClick={() => triggerTemplateForUser(user, 'two_factor')}
+                                className="p-1 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded transition-colors"
+                                title="Disparar Notificação de 2FA"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                              </button>
+                            </div>
 
+                            {/* Alerta de Sem Conta */}
+                            <div className="flex items-center gap-0.5 bg-gray-900/40 p-0.5 rounded-lg border border-gray-700/30">
                               <button
                                 onClick={() => toggleBetfairAlert(user)}
                                 disabled={alertingBetfairUser === user.id}
-                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
+                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
                                   user.betfair_warning_alert 
-                                    ? 'bg-red-500/20 text-red-500 border border-red-500/50' 
-                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-red-500/20 text-red-500' 
+                                    : 'text-gray-400 hover:bg-gray-700/50'
                                 }`}
                                 title="Aviso para Configurar Betfair"
                               >
                                 {alertingBetfairUser === user.id ? '...' : user.betfair_warning_alert ? 'Sem Conta ON' : 'Sem Conta'}
                               </button>
+                              <button
+                                onClick={() => triggerTemplateForUser(user, 'betfair_warning')}
+                                className="p-1 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded transition-colors"
+                                title="Disparar Notificação de Configuração Pendente Betfair"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                              </button>
+                            </div>
 
+                            {/* Alerta de Banca */}
+                            <div className="flex items-center gap-0.5 bg-gray-900/40 p-0.5 rounded-lg border border-gray-700/30">
                               <button
                                 onClick={() => toggleBancaAlert(user)}
                                 disabled={alertingBancaUser === user.id}
-                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
+                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] uppercase font-bold transition-colors ${
                                   user.banca_warning_alert 
-                                    ? 'bg-orange-500/20 text-orange-500 border border-orange-500/50' 
-                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-orange-500/20 text-orange-500' 
+                                    : 'text-gray-400 hover:bg-gray-700/50'
                                 }`}
                                 title="Aviso de Banca Insuficiente"
                               >
                                 {alertingBancaUser === user.id ? '...' : user.banca_warning_alert ? 'Banca < 500 ON' : 'Banca < 500'}
                               </button>
+                              <button
+                                onClick={() => triggerTemplateForUser(user, 'banca_warning')}
+                                className="p-1 text-gray-400 hover:text-orange-400 hover:bg-gray-800 rounded transition-colors"
+                                title="Disparar Notificação de Banca Insuficiente"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </td>
