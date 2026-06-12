@@ -142,6 +142,66 @@ export function AdminDashboard() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   // const [realtimeNotification, setRealtimeNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
 
+  // Push Notification form states
+  const [pushTitle, setPushTitle] = useState('');
+  const [pushBody, setPushBody] = useState('');
+  const [pushUrl, setPushUrl] = useState('/dashboard');
+  const [pushTarget, setPushTarget] = useState<'all' | 'tag' | 'user'>('all');
+  const [pushTargetTag, setPushTargetTag] = useState('');
+  const [pushTargetUser, setPushTargetUser] = useState('');
+  const [sendingPush, setSendingPush] = useState(false);
+  const [pushResultMsg, setPushResultMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [showPushForm, setShowPushForm] = useState(false);
+
+  const handleSendPush = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pushTitle.trim() || !pushBody.trim()) {
+      setPushResultMsg({ type: 'error', text: 'Por favor, preencha o título e a mensagem.' });
+      return;
+    }
+
+    setSendingPush(true);
+    setPushResultMsg(null);
+
+    try {
+      const adminPassword = getAdminPassword();
+      const payload = {
+        title: pushTitle.trim(),
+        body: pushBody.trim(),
+        url: pushUrl.trim(),
+        targetUserId: pushTarget === 'user' ? pushTargetUser : undefined,
+        targetTagColor: pushTarget === 'tag' ? pushTargetTag : undefined,
+        adminSecret: adminPassword,
+      };
+
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: payload,
+      });
+
+      if (error) throw error;
+
+      setPushResultMsg({
+        type: 'success',
+        text: data?.message || 'Notificação enviada com sucesso!'
+      });
+      
+      // Clear form on success
+      setPushTitle('');
+      setPushBody('');
+      setPushUrl('/dashboard');
+      
+    } catch (err: any) {
+      console.error('Erro ao enviar push:', err);
+      setPushResultMsg({
+        type: 'error',
+        text: err.message || 'Erro ao processar o disparo da notificação.'
+      });
+    } finally {
+      setSendingPush(false);
+    }
+  };
+
+
   // Verifica se está autenticado como admin
   useEffect(() => {
     const adminSession = sessionStorage.getItem('admin_session');
@@ -600,6 +660,170 @@ export function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Enviar Notificações Push Section */}
+        <div className="glass-card border-red-900/30 mb-8 overflow-hidden">
+          <button
+            onClick={() => setShowPushForm(!showPushForm)}
+            className="w-full p-6 flex items-center justify-between hover:bg-gray-800/20 transition-all duration-200 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Enviar Notificação Push</h3>
+                <p className="text-sm text-gray-400">Envie mensagens em tempo real para os dispositivos dos usuários</p>
+              </div>
+            </div>
+            <div className="text-gray-400">
+              {showPushForm ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </div>
+          </button>
+
+          {showPushForm && (
+            <div className="p-6 border-t border-gray-700/50 bg-gray-800/10">
+              {pushResultMsg && (
+                <div className={`p-4 mb-5 rounded-lg text-sm border flex items-start gap-3 ${
+                  pushResultMsg.type === 'success'
+                    ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                    : 'bg-red-500/10 border-red-500/30 text-red-400'
+                }`}>
+                  <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {pushResultMsg.type === 'success' ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
+                  </svg>
+                  <span>{pushResultMsg.text}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSendPush} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Título da Notificação</label>
+                    <input
+                      type="text"
+                      value={pushTitle}
+                      onChange={(e) => setPushTitle(e.target.value)}
+                      placeholder="Ex: Nova Estratégia Disponível!"
+                      className="input-modern focus:border-red-500 focus:ring-red-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">URL de Redirecionamento</label>
+                    <input
+                      type="text"
+                      value={pushUrl}
+                      onChange={(e) => setPushUrl(e.target.value)}
+                      placeholder="Ex: /surebet ou /strategies"
+                      className="input-modern focus:border-red-500 focus:ring-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Mensagem</label>
+                  <textarea
+                    value={pushBody}
+                    onChange={(e) => setPushBody(e.target.value)}
+                    placeholder="Digite o conteúdo detalhado do alerta..."
+                    className="input-modern h-24 resize-y focus:border-red-500 focus:ring-red-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Enviar Para</label>
+                    <select
+                      value={pushTarget}
+                      onChange={(e) => setPushTarget(e.target.value as any)}
+                      className="input-modern focus:border-red-500 focus:ring-red-500"
+                    >
+                      <option value="all">Todos os Usuários</option>
+                      <option value="tag">Usuários por Tag</option>
+                      <option value="user">Usuário Específico</option>
+                    </select>
+                  </div>
+
+                  {pushTarget === 'tag' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">Selecionar Tag</label>
+                      <select
+                        value={pushTargetTag}
+                        onChange={(e) => setPushTargetTag(e.target.value)}
+                        className="input-modern focus:border-red-500 focus:ring-red-500"
+                        required
+                      >
+                        <option value="">-- Escolha a tag --</option>
+                        <option value="red">{tagNames.red}</option>
+                        <option value="green">{tagNames.green}</option>
+                        <option value="blue">{tagNames.blue}</option>
+                        <option value="purple">{tagNames.purple}</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {pushTarget === 'user' && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-400 mb-2">Selecionar Usuário</label>
+                      <select
+                        value={pushTargetUser}
+                        onChange={(e) => setPushTargetUser(e.target.value)}
+                        className="input-modern focus:border-red-500 focus:ring-red-500"
+                        required
+                      >
+                        <option value="">-- Escolha o usuário --</option>
+                        {users.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.full_name} ({u.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={sendingPush}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-bold bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer shadow-lg shadow-amber-600/25"
+                  >
+                    {sendingPush ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Disparando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span>Disparar Notificação</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Filtros */}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "pwa-development": {
+      "source": "alinaqi/claude-bootstrap",
+      "sourceType": "github",
+      "skillPath": "skills/pwa-development/SKILL.md",
+      "computedHash": "2219041ce92f6361ba77eb06c9a927dc7a1ba48f40ff5132321a29c4154ebc7a"
+    },
+    "pwa-expert": {
+      "source": "erichowens/some_claude_skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/pwa-expert/SKILL.md",
+      "computedHash": "cbd7e8e72e82504420ece0cb1dd8994cd5909f60d21c9082afccbddf7c528b8b"
+    }
+  }
+}

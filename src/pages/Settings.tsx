@@ -58,6 +58,49 @@ export function Settings() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  
+  // Push notifications state
+  const [pushStatus, setPushStatus] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('unsupported');
+      return;
+    }
+    
+    setPushStatus(Notification.permission);
+    
+    // Check if subscription exists
+    import('../utils/pwa').then(({ getSubscription }) => {
+      getSubscription().then((sub) => {
+        setIsSubscribed(!!sub);
+      });
+    }).catch(err => console.error('Error loading PWA utils:', err));
+  }, []);
+
+  const handleTogglePush = async () => {
+    if (pushLoading) return;
+    setPushLoading(true);
+    try {
+      const { subscribeToPush, unsubscribeFromPush } = await import('../utils/pwa');
+      if (isSubscribed) {
+        await unsubscribeFromPush();
+        setIsSubscribed(false);
+        setPushStatus(Notification.permission);
+      } else {
+        await subscribeToPush(user?.id || null);
+        setIsSubscribed(true);
+        setPushStatus(Notification.permission);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro ao configurar notificações.');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   const [bancaValue, setBancaValue] = useState(user?.banca?.toString() || '');
   const [stakeValue, setStakeValue] = useState(user?.stake?.toString() || '');
   const [stopWinValue, setStopWinValue] = useState(user?.stop_win?.toString() || '');
@@ -268,6 +311,48 @@ export function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Push Notifications Settings */}
+        {pushStatus !== 'unsupported' && (
+          <div className="surface-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{
+                background: isSubscribed ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.1)',
+                color: isSubscribed ? 'var(--color-accent)' : 'var(--color-text-muted)'
+              }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="heading-md text-base">Notificações no Dispositivo</h3>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Gerencie os alertas enviados pelo administrador</p>
+              </div>
+            </div>
+            <label className="flex items-center justify-between p-4 rounded-lg cursor-pointer"
+                   style={{ background: 'var(--color-bg-deep)', border: '1px solid var(--color-border-light)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-6 rounded-full relative transition-all duration-300"
+                     style={{ background: isSubscribed ? 'var(--color-accent)' : 'var(--color-text-faint)' }}>
+                  <div className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300"
+                       style={{ left: isSubscribed ? '24px' : '4px' }} />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: isSubscribed ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>
+                    {isSubscribed ? 'Alertas Ativados' : 'Alertas Desativados'}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
+                    {pushStatus === 'denied' ? 'Permissão bloqueada no navegador' : (isSubscribed ? 'Recebendo notificações push' : 'Toque para ativar')}
+                  </div>
+                </div>
+              </div>
+              <input type="checkbox" className="sr-only" 
+                checked={isSubscribed}
+                disabled={pushLoading || pushStatus === 'denied'}
+                onChange={handleTogglePush} />
+            </label>
+          </div>
+        )}
 
         {/* Exchange Type */}
         <div className="surface-card p-6">

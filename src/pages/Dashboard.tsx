@@ -43,6 +43,49 @@ export function Dashboard() {
   const [policiesLoading, setPoliciesLoading] = useState(false);
   const [stats, setStats] = useState<PlatformStats | null>(null);
 
+  // Push notifications state
+  const [pushStatus, setPushStatus] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('unsupported');
+      return;
+    }
+    
+    setPushStatus(Notification.permission);
+    
+    // Check if subscription exists
+    import('../utils/pwa').then(({ getSubscription }) => {
+      getSubscription().then((sub) => {
+        setIsSubscribed(!!sub);
+      });
+    }).catch(err => console.error('Error loading PWA utils:', err));
+  }, []);
+
+  const handleTogglePush = async () => {
+    if (pushLoading) return;
+    setPushLoading(true);
+    try {
+      const { subscribeToPush, unsubscribeFromPush } = await import('../utils/pwa');
+      if (isSubscribed) {
+        await unsubscribeFromPush();
+        setIsSubscribed(false);
+        setPushStatus(Notification.permission);
+      } else {
+        await subscribeToPush(user?.id || null);
+        setIsSubscribed(true);
+        setPushStatus(Notification.permission);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro ao configurar notificações.');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+
   // Fetch stats from backend RPC (server calculates — identical for all users)
   const fetchStats = useCallback(async () => {
     try {
@@ -295,6 +338,34 @@ export function Dashboard() {
             </Link>
           </div>
         </div>
+
+        {/* PWA Push Notification Activation Card */}
+        {pushStatus !== 'unsupported' && pushStatus !== 'denied' && !isSubscribed && (
+          <div className="surface-card p-6 border-amber-500/30 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden animate-slide-up">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0 animate-pulse">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="heading-md text-base text-amber-400 font-bold">Ativar Notificações Push</h3>
+                <p className="text-sm text-gray-400 max-w-xl">
+                  Fique por dentro! Receba alertas instantâneos de novas estratégias, mudanças de banca e avisos de credenciais diretamente na tela do seu dispositivo.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleTogglePush}
+              disabled={pushLoading}
+              className="btn-primary flex items-center justify-center gap-2 whitespace-nowrap !py-2.5 !px-5 shadow-lg shadow-amber-500/10 cursor-pointer"
+              style={{ background: 'var(--color-accent)', color: '#0B1120' }}
+            >
+              <span>{pushLoading ? 'Processando...' : 'Ativar Alertas'}</span>
+            </button>
+          </div>
+        )}
 
         {/* ── LIVE IMPACT PANEL ── */}
         <div className="surface-card overflow-hidden" style={{ border: '1px solid rgba(16, 185, 129, 0.15)' }}>
