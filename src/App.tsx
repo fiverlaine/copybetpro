@@ -60,17 +60,23 @@ const Icons = {
 // ── Logo Component ──
 function Logo() {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-           style={{ background: 'var(--color-accent)' }}>
-        <svg className="w-4.5 h-4.5 text-[#0B1120]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-        </svg>
-      </div>
-      <span className="heading-display text-[1.15rem] tracking-tight" style={{ letterSpacing: '-0.04em' }}>
-        COPYBET<span style={{ color: 'var(--color-accent)' }}>PRO</span>
-      </span>
-    </div>
+    <svg viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CopybetPro" className="w-full h-auto max-w-[180px]">
+      {/* Eco (a cópia) */}
+      <g opacity="0.28">
+        <polyline points="48,164 116,86" fill="none" stroke="#F59E0B" strokeWidth={15} strokeLinecap="round"/>
+        <polyline points="116,86 87,88" fill="none" stroke="#F59E0B" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round"/>
+        <polyline points="116,86 114,117" fill="none" stroke="#F59E0B" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round"/>
+      </g>
+      {/* Seta principal (a jogada) */}
+      <polyline points="62,150 130,72" fill="none" stroke="#F59E0B" strokeWidth={15} strokeLinecap="round"/>
+      <polyline points="130,72 101,74" fill="none" stroke="#F59E0B" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="130,72 128,103" fill="none" stroke="#F59E0B" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Wordmark */}
+      <text x="196" y="118" fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fontSize={52} fontWeight={700} letterSpacing="-1.5" fill="#F1F5F9">Copybet</text>
+      <rect x="430" y="84" width={74} height={36} rx={9} fill="#F59E0B"/>
+      <text x="467" y="109" textAnchor="middle" fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fontSize={20} fontWeight={700} letterSpacing={1} fill="#0B1120">PRO</text>
+      <text x="198" y="148" fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fontSize={15} fontWeight={500} letterSpacing={3} fill="#64748B">COPY TRADING INTELIGENTE</text>
+    </svg>
   );
 }
 
