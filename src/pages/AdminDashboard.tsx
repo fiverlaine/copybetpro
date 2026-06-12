@@ -23,6 +23,8 @@ interface User {
   betfair_warning_alert: boolean;
   banca_warning_alert: boolean;
   tag_color: string | null;
+  pwa_installed?: boolean;
+  push_notifications_enabled?: boolean;
 }
 
 interface CredentialHistory {
@@ -1171,6 +1173,22 @@ export function AdminDashboard() {
                           <div className="font-medium text-white">{user.full_name}</div>
                           <div className="text-xs text-gray-400">{user.email}</div>
                           <div className="text-[10px] text-gray-500 mt-1">{formatDate(user.created_at)}</div>
+                          <div className="flex gap-1.5 mt-2">
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase transition-colors ${
+                              user.pwa_installed 
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
+                                : 'bg-gray-800/80 text-gray-500 border border-gray-700/30'
+                            }`} title={user.pwa_installed ? 'Instalado como aplicativo PWA' : 'Acessando via navegador padrão'}>
+                              {user.pwa_installed ? '📱 PWA ON' : '🌐 Browser'}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase transition-colors ${
+                              user.push_notifications_enabled 
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                : 'bg-gray-800/80 text-gray-500 border border-gray-700/30'
+                            }`} title={user.push_notifications_enabled ? 'Notificações Ativas no Dispositivo' : 'Notificações Não Habilitadas'}>
+                              {user.push_notifications_enabled ? '🔔 Push ON' : '🔕 Push OFF'}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">

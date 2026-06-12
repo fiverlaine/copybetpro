@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 interface PWAPromptProps {
   userId: string | null;
@@ -18,6 +19,44 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
   
   // Android native install prompt reference
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Sync PWA and push status with Database
+  useEffect(() => {
+    if (!userId) return;
+
+    const syncStatus = async () => {
+      try {
+        const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                               (window.navigator as any).standalone === true;
+        const checkPush = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+        
+        await supabase.from('users').update({
+          pwa_installed: checkStandalone,
+          push_notifications_enabled: checkPush
+        }).eq('id', userId);
+      } catch (err) {
+        console.error('Erro ao sincronizar status PWA/Notificações:', err);
+      }
+    };
+
+    // Delay sync slightly to ensure DOM/navigator states are fully loaded
+    const syncTimer = setTimeout(syncStatus, 1500);
+
+    // Also set up listener to update status if display-mode changes
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleMediaChange = () => syncStatus();
+    
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaChange);
+    }
+    
+    return () => {
+      clearTimeout(syncTimer);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+      }
+    };
+  }, [userId]);
 
   // Detect OS and PWA status
   useEffect(() => {
@@ -109,6 +148,13 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
       await subscribeToPush(userId);
       onSubscribed();
       setShowPushPrompt(false);
+      
+      // Update database status immediately
+      if (userId) {
+        await supabase.from('users').update({
+          push_notifications_enabled: true
+        }).eq('id', userId);
+      }
     } catch (err: any) {
       console.error(err);
       alert(err.message || 'Erro ao habilitar notificações.');

@@ -80,6 +80,30 @@ export function Settings() {
     }).catch(err => console.error('Error loading PWA utils:', err));
   }, []);
 
+  // Sync PWA and Push status on mount/load
+  useEffect(() => {
+    if (user?.id) {
+      const syncStatus = async () => {
+        try {
+          const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                        (window.navigator as any).standalone === true;
+          const isPush = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+          
+          await supabase.from('users').update({
+            pwa_installed: isPWA,
+            push_notifications_enabled: isPush
+          }).eq('id', user.id);
+        } catch (err) {
+          console.error('Error syncing status in settings:', err);
+        }
+      };
+      
+      // Delay slightly
+      const timer = setTimeout(syncStatus, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id]);
+
 
   const handleTogglePush = async () => {
     if (pushLoading) return;
@@ -90,16 +114,21 @@ export function Settings() {
         await unsubscribeFromPush();
         setIsSubscribed(false);
         setPushStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+        if (user?.id) {
+          await supabase.from('users').update({ push_notifications_enabled: false }).eq('id', user.id);
+        }
       } else {
         await subscribeToPush(user?.id || null);
         setIsSubscribed(true);
         setPushStatus(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+        if (user?.id) {
+          await supabase.from('users').update({ push_notifications_enabled: true }).eq('id', user.id);
+        }
       }
     } catch (err: any) {
       alert(err.message || 'Erro ao configurar notificações.');
     } finally {
       setPushLoading(false);
-
     }
   };
 
