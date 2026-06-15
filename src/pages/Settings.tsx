@@ -212,7 +212,10 @@ export function Settings() {
       p_stop_loss: form.stop_loss
     });
     setLoading(false);
-    const updatedData = Array.isArray(data) ? data[0] : data;
+    let updatedData = Array.isArray(data) ? data[0] : data;
+    if (updatedData && typeof updatedData === 'object' && 'update_user_profile_secure' in updatedData) {
+      updatedData = (updatedData as any).update_user_profile_secure;
+    }
     if (error) { setMessage({ type: 'error', text: error.message }); }
     else if (updatedData) {
       // Tenta limpar os alertas diretamente se a RLS permitir
