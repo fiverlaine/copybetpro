@@ -1,58 +1,71 @@
 <!doctype html>
 <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
 
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Fonts: Satoshi (Display) + DM Sans (UI) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://api.fontshare.com/v2/css?f[]=satoshi@700,800,900&display=swap"
+      rel="stylesheet"
+    />
 
-  <!-- Fonts: Satoshi (Display) + DM Sans (UI) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
-    rel="stylesheet">
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,800,900&display=swap" rel="stylesheet">
+    <meta
+      name="description"
+      content="COPYBETPRO — Sistema de Trading Profissional. Copie estratégias de traders profissionais na Betfair com automação inteligente."
+    />
+    <meta name="theme-color" content="#0B1120" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/sigatrader-icon.svg" />
+    <title>COPYBETPRO — Trading Profissional</title>
+  </head>
 
-  <meta name="description"
-    content="COPYBETPRO — Sistema de Trading Profissional. Copie estratégias de traders profissionais na Betfair com automação inteligente." />
-  <meta name="theme-color" content="#0B1120" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/sigatrader-icon.svg" />
-  <title>COPYBETPRO — Trading Profissional</title>
-</head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-  <!-- BetChat Widget -->
-  <script>
-    (function() {
-      var iframe = document.createElement('iframe');
-      iframe.src = 'https://joy-whisper-weave.lovable.app/widget-preview/a833050d-a140-433d-8e43-44fcfc2e091c';
-      iframe.id = 'betchat-widget-iframe';
-      iframe.allow = 'clipboard-write';
-      iframe.style.cssText = 'position:fixed;bottom:60px;right:20px;width:64px;height:64px;border:0;z-index:2147483647;background:transparent!important;background-color:transparent!important;color-scheme:normal;display:block;overflow:hidden;box-shadow:none;outline:0;transition:width 0.2s,height 0.2s;';
-      iframe.title = 'BetChat';
-      iframe.setAttribute('allowtransparency', 'true');
-      iframe.setAttribute('frameborder', '0');
-      iframe.setAttribute('scrolling', 'no');
-      iframe.style.setProperty('background', 'transparent', 'important');
-      iframe.style.setProperty('background-color', 'transparent', 'important');
-      document.body.appendChild(iframe);
-      window.addEventListener('message', function(e) {
-        if (!e.data || e.data.type !== 'betchat-resize') return;
-        if (e.data.open) {
-          iframe.style.width = '364px';
-          iframe.style.height = '548px';
-        } else {
-          iframe.style.width = '64px';
-          iframe.style.height = '64px';
-        }
-      });
-    })();
-  </script>
-  <!-- Fim BetChat Widget -->
-</body>
-
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- BetChat Widget -->
+    <script>
+      (function () {
+        var iframe = document.createElement("iframe");
+        iframe.src =
+          "https://joy-whisper-weave.lovable.app/widget-preview/a833050d-a140-433d-8e43-44fcfc2e091c";
+        iframe.id = "betchat-widget-iframe";
+        iframe.allow = "clipboard-write";
+        iframe.style.cssText =
+          "position:fixed;bottom:80px;right:20px;width:64px;height:64px;border:0;z-index:2147483647;background:transparent!important;background-color:transparent!important;color-scheme:normal;display:block;overflow:hidden;box-shadow:none;outline:0;transition:width 0.2s,height 0.2s;";
+        iframe.title = "BetChat";
+        iframe.setAttribute("allowtransparency", "true");
+        iframe.setAttribute("frameborder", "0");
+        iframe.setAttribute("scrolling", "no");
+        iframe.style.setProperty("background", "transparent", "important");
+        iframe.style.setProperty(
+          "background-color",
+          "transparent",
+          "important",
+        );
+        document.body.appendChild(iframe);
+        window.addEventListener("message", function (e) {
+          if (!e.data || e.data.type !== "betchat-resize") return;
+          if (e.data.open) {
+            iframe.style.width = "364px";
+            iframe.style.height = "548px";
+          } else {
+            iframe.style.width = "64px";
+            iframe.style.height = "64px";
+          }
+        });
+      })();
+    </script>
+    <!-- Fim BetChat Widget -->
+  </body>
 </html>
