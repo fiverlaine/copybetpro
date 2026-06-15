@@ -296,10 +296,10 @@ function BetChatWidget() {
     if (document.getElementById('betchat-widget-iframe')) return;
 
     const iframe = document.createElement('iframe');
-    iframe.src = 'https://joy-whisper-weave.lovable.app/widget-preview/a833050d-a140-433d-8e43-44fcfc2e091c';
+    iframe.src = 'https://joy-whisper-weave.lovable.app/widget-preview/77b7d309-5b55-4a43-bc47-4ea2c71e5219';
     iframe.id = 'betchat-widget-iframe';
     iframe.allow = 'clipboard-write';
-    iframe.style.cssText = 'position:fixed;bottom:80px;right:20px;width:64px;height:64px;border:0;z-index:2147483647;background:transparent!important;background-color:transparent!important;color-scheme:normal;display:block;overflow:hidden;box-shadow:none;outline:0;transition:width 0.2s,height 0.2s;';
+    iframe.style.cssText = 'position:fixed;bottom:60px;right:20px;width:64px;height:64px;border:0;z-index:2147483647;background:transparent!important;background-color:transparent!important;color-scheme:normal;display:block;overflow:hidden;box-shadow:none;outline:0;transition:width 0.2s,height 0.2s;';
     iframe.title = 'BetChat';
     iframe.setAttribute('allowtransparency', 'true');
     iframe.setAttribute('frameborder', '0');
