@@ -29,21 +29,25 @@
   <script>
     (function() {
       var iframe = document.createElement('iframe');
-      iframe.src = 'https://joy-whisper-weave.lovable.app/widget-preview/eb55f03e-9fef-4d92-b9aa-c6d6e3462df8';
+      iframe.src = 'https://6adee047-e552-409e-94b0-60f5f1c4bfd8.lovableproject.com/widget-preview/0fb640a1-c94b-43ac-be6a-31d53e4dc649';
       iframe.id = 'betchat-widget-iframe';
       iframe.allow = 'clipboard-write';
-      iframe.style.cssText = 'position:fixed;bottom:60px;left:20px;width:80px;height:80px;border:none;z-index:2147483647;background:transparent;transition:width 0.2s,height 0.2s;';
+      iframe.style.cssText = 'position:fixed;bottom:60px;right:20px;width:64px;height:64px;border:0;z-index:2147483647;background:transparent!important;background-color:transparent!important;color-scheme:normal;display:block;overflow:hidden;box-shadow:none;outline:0;transition:width 0.2s,height 0.2s;';
+      iframe.title = 'BetChat';
       iframe.setAttribute('allowtransparency', 'true');
+      iframe.setAttribute('frameborder', '0');
       iframe.setAttribute('scrolling', 'no');
+      iframe.style.setProperty('background', 'transparent', 'important');
+      iframe.style.setProperty('background-color', 'transparent', 'important');
       document.body.appendChild(iframe);
       window.addEventListener('message', function(e) {
         if (!e.data || e.data.type !== 'betchat-resize') return;
         if (e.data.open) {
-          iframe.style.width = '400px';
-          iframe.style.height = '600px';
+          iframe.style.width = '364px';
+          iframe.style.height = '548px';
         } else {
-          iframe.style.width = '80px';
-          iframe.style.height = '80px';
+          iframe.style.width = '64px';
+          iframe.style.height = '64px';
         }
       });
     })();
