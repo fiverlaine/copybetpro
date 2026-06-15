@@ -268,19 +268,7 @@ export function Settings() {
         </Link>
       </div>
 
-      {/* Feedback Message */}
-      {message && (
-        <div className="p-4 rounded-lg flex items-start gap-3 animate-slide-down text-sm" style={{
-          background: message.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-          border: `1px solid ${message.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-          color: message.type === 'success' ? 'var(--color-success)' : 'var(--color-error)',
-        }}>
-          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={message.type === 'success' ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"} />
-          </svg>
-          <span className="font-medium">{message.text}</span>
-        </div>
-      )}
+
 
       <form onSubmit={onSubmit} className="space-y-5">
         {/* System Status */}
@@ -588,7 +576,7 @@ export function Settings() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-1 mb-10">
+        <div className="flex items-center gap-3 pt-1 mb-6">
           <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -597,6 +585,20 @@ export function Settings() {
           </button>
           <Link to="/dashboard" className="btn-outline">Cancelar</Link>
         </div>
+
+        {/* Feedback Message */}
+        {message && (
+          <div className="p-4 rounded-lg flex items-start gap-3 animate-slide-down text-sm mb-10" style={{
+            background: message.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+            border: `1px solid ${message.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+            color: message.type === 'success' ? 'var(--color-success)' : 'var(--color-error)',
+          }}>
+            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d={message.type === 'success' ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"} />
+            </svg>
+            <span className="font-medium">{message.text}</span>
+          </div>
+        )}
         
         {/* Logout */}
         <div className="border-t pt-8" style={{ borderColor: 'var(--color-border)' }}>
