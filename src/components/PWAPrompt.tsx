@@ -16,6 +16,7 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [showDesktopPrompt, setShowDesktopPrompt] = useState(false);
   
   // Android native install prompt reference
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -80,10 +81,19 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
       setShowInstallPrompt(true);
     }
 
+    // Desktop prompt: show if desktop and not dismissed
+    const desktopDismissed = localStorage.getItem('pwa_desktop_dismissed') === 'true';
+    if (detectedOS === 'desktop' && !desktopDismissed) {
+      const timer = setTimeout(() => {
+        setShowDesktopPrompt(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+
     // If standalone and permission is default (and not dismissed), show push notification prompt
     const pushDismissed = localStorage.getItem('pwa_push_dismissed') === 'true';
     const hasNotification = typeof Notification !== 'undefined';
-    if (hasNotification && Notification.permission === 'default' && !pushDismissed) {
+    if (hasNotification && Notification.permission === 'default' && !pushDismissed && detectedOS !== 'desktop') {
       // Show push prompt shortly after load
       const timer = setTimeout(() => {
         // If install guide is showing, wait; otherwise show it
@@ -130,6 +140,12 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
     setShowPushPrompt(false);
   };
 
+  // Dismiss Desktop QR Code prompt
+  const handleDismissDesktop = () => {
+    localStorage.setItem('pwa_desktop_dismissed', 'true');
+    setShowDesktopPrompt(false);
+  };
+
   // Trigger Android native PWA installation
   const handleAndroidInstall = async () => {
     if (!deferredPrompt) return;
@@ -172,7 +188,62 @@ export function PWAPrompt({ userId, onSubscribed }: PWAPromptProps) {
   // RENDERING
   // -------------------------------------------------------------
 
-  if (os === 'desktop') return null;
+  if (os === 'desktop') {
+    if (!showDesktopPrompt) return null;
+
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin)}&color=0b1120&bgcolor=ffffff`;
+
+    return (
+      <div className="fixed bottom-4 right-4 z-[9999] animate-slide-up max-w-sm w-full p-4">
+        <div className="glass-card p-5 border border-amber-500/30 bg-[#0c1020]/95 backdrop-blur-md text-white shadow-2xl flex flex-col gap-4 rounded-2xl relative">
+          <button 
+            onClick={handleDismissDesktop} 
+            className="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/5 cursor-pointer"
+            aria-label="Fechar"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div className="flex items-start gap-3.5 pr-6">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-amber-500">Acesse no seu Celular</h4>
+              <p className="text-[11px] text-gray-400 mt-0.5">Acompanhe suas estratégias e receba notificações instantâneas.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center bg-white/5 rounded-xl p-4 gap-3">
+            <div className="bg-white p-2.5 rounded-xl shadow-lg border border-white/10">
+              <img 
+                src={qrCodeUrl} 
+                alt="QR Code para instalar no celular" 
+                className="w-[130px] h-[130px] block object-contain"
+                loading="lazy"
+              />
+            </div>
+            <p className="text-[10px] text-gray-300 text-center font-medium">
+              Abra a câmera do seu celular e aponte para o QR Code acima
+            </p>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={handleDismissDesktop}
+              className="w-full py-2 rounded-lg bg-amber-500 text-gray-900 font-bold text-xs hover:bg-amber-400 transition-colors shadow-md shadow-amber-500/15 cursor-pointer text-center"
+            >
+              Fechar Mensagem
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
