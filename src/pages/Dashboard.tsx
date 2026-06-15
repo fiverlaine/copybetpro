@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { PoliciesModal } from '../components/PoliciesModal';
-import { setSessionUser } from '../lib/session';
+import { setSessionUser, getSessionUser } from '../lib/session';
 import { PWAPrompt } from '../components/PWAPrompt';
 
 interface PlatformStats {
@@ -31,8 +31,7 @@ const SettingsIcon = () => (
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const raw = sessionStorage.getItem('session_user');
-  const user = raw ? JSON.parse(raw) : null;
+  const user = getSessionUser();
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showPoliciesModal, setShowPoliciesModal] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);

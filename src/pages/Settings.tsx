@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Link, useNavigate } from 'react-router-dom';
 import { PoliciesModal } from '../components/PoliciesModal';
-import { setSessionUser } from '../lib/session';
+import { setSessionUser, getSessionUser, clearSessionUser } from '../lib/session';
 import { extractBrazilPhoneDigits, formatBrazilPhoneDisplay, formatBrazilPhoneForStorage, sanitizeBrazilPhoneInput } from '../utils/phone';
 
 const PhoneIcon = () => (
@@ -40,8 +40,7 @@ const EyeOffIcon = () => (
 
 export function Settings() {
   const navigate = useNavigate();
-  const raw = sessionStorage.getItem('session_user');
-  const user = raw ? JSON.parse(raw) : null;
+  const user = getSessionUser();
   const initialPhoneDigits = extractBrazilPhoneDigits(user?.phone);
   const [form, setForm] = useState({
     phone: initialPhoneDigits,
@@ -228,7 +227,7 @@ export function Settings() {
         // Ignora erro se RLS não permitir
       }
 
-      sessionStorage.setItem('session_user', JSON.stringify(updatedData));
+      setSessionUser(updatedData);
       setForm({
         phone: extractBrazilPhoneDigits(updatedData.phone), exchange_type: updatedData.exchange_type || 'betfair',
         betfair_account: updatedData.betfair_account || '', betfair_password: updatedData.betfair_password || '',
@@ -604,7 +603,7 @@ export function Settings() {
           <button
             type="button"
             onClick={() => {
-              sessionStorage.removeItem('session_user');
+              clearSessionUser();
               navigate('/login');
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200"

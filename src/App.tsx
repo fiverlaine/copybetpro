@@ -290,8 +290,56 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ── BetChat Widget Component ──
+function BetChatWidget() {
+  useEffect(() => {
+    if (document.getElementById('betchat-widget-iframe')) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://joy-whisper-weave.lovable.app/widget-preview/a833050d-a140-433d-8e43-44fcfc2e091c';
+    iframe.id = 'betchat-widget-iframe';
+    iframe.allow = 'clipboard-write';
+    iframe.style.cssText = 'position:fixed;bottom:80px;right:20px;width:64px;height:64px;border:0;z-index:2147483647;background:transparent!important;background-color:transparent!important;color-scheme:normal;display:block;overflow:hidden;box-shadow:none;outline:0;transition:width 0.2s,height 0.2s;';
+    iframe.title = 'BetChat';
+    iframe.setAttribute('allowtransparency', 'true');
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.style.setProperty('background', 'transparent', 'important');
+    iframe.style.setProperty('background-color', 'transparent', 'important');
+    document.body.appendChild(iframe);
+
+    const handleMessage = (e: MessageEvent) => {
+      if (!e.data || e.data.type !== 'betchat-resize') return;
+      if (e.data.open) {
+        iframe.style.width = '364px';
+        iframe.style.height = '548px';
+      } else {
+        iframe.style.width = '64px';
+        iframe.style.height = '64px';
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      iframe.remove();
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  return null;
+}
+
 // ── User Layout ──
 function UserLayout({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<any>(() => getSessionUser());
+
+  useEffect(() => {
+    const handler = () => setUser(getSessionUser());
+    window.addEventListener('session_user_changed', handler);
+    return () => window.removeEventListener('session_user_changed', handler);
+  }, []);
+
   return (
     <div className="min-h-screen" style={{ color: 'var(--color-text-primary)' }}>
       {/* Ambient glow */}
@@ -318,14 +366,15 @@ function UserLayout({ children }: { children: React.ReactNode }) {
           <MobileNav />
         </div>
       </div>
+      {user && <BetChatWidget />}
     </div>
   );
 }
 
 // ── App ──
 export default function App() {
-  const raw = sessionStorage.getItem('session_user');
-  const isLogged = Boolean(raw);
+  const user = getSessionUser();
+  const isLogged = Boolean(user);
 
   return (
     <BrowserRouter>
