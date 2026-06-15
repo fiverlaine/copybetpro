@@ -25,6 +25,30 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <!-- BetChat Widget -->
+  <script>
+    (function() {
+      var iframe = document.createElement('iframe');
+      iframe.src = 'https://joy-whisper-weave.lovable.app/widget-preview/eb55f03e-9fef-4d92-b9aa-c6d6e3462df8';
+      iframe.id = 'betchat-widget-iframe';
+      iframe.allow = 'clipboard-write';
+      iframe.style.cssText = 'position:fixed;bottom:60px;left:20px;width:80px;height:80px;border:none;z-index:2147483647;background:transparent;transition:width 0.2s,height 0.2s;';
+      iframe.setAttribute('allowtransparency', 'true');
+      iframe.setAttribute('scrolling', 'no');
+      document.body.appendChild(iframe);
+      window.addEventListener('message', function(e) {
+        if (!e.data || e.data.type !== 'betchat-resize') return;
+        if (e.data.open) {
+          iframe.style.width = '400px';
+          iframe.style.height = '600px';
+        } else {
+          iframe.style.width = '80px';
+          iframe.style.height = '80px';
+        }
+      });
+    })();
+  </script>
+  <!-- Fim BetChat Widget -->
 </body>
 
 </html>
